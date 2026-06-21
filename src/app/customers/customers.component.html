@@ -1,0 +1,209 @@
+<!-- ---- KPI CARDS ---- -->
+<section class="stats-grid">
+  <div class="stat-card" *ngFor="let stat of stats">
+    <div class="stat-icon" [ngClass]="{
+      'icon-blue': stat.color === 'blue',
+      'icon-orange': stat.color === 'orange',
+      'icon-green': stat.color === 'green',
+      'icon-red': stat.color === 'red'
+    }">
+      <i [ngClass]="stat.icon"></i>
+    </div>
+    <div>
+      <p class="stat-val">{{ stat.value }}</p>
+      <p class="stat-lbl">{{ stat.label }}</p>
+    </div>
+    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
+      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
+      {{ stat.change }}
+    </span>
+  </div>
+</section>
+
+<!-- ---- CUSTOMERS TABLE ---- -->
+<section class="card table-card">
+  <div class="card-hdr">
+    <h2 class="card-title">All Customers</h2>
+    <div class="filter-bar">
+      <div class="search-box">
+        <i class="ri-search-line"></i>
+        <input type="text" placeholder="Search name, ID, phone..." [(ngModel)]="searchTerm" />
+      </div>
+      <select class="filter-select" [(ngModel)]="statusFilter">
+        <option value="All">All Status</option>
+        <option value="Active">Active</option>
+        <option value="Flagged">Flagged</option>
+        <option value="Suspended">Suspended</option>
+      </select>
+      <select class="filter-select" [(ngModel)]="tierFilter">
+        <option value="All">All Tiers</option>
+        <option value="No Bundle">No Bundle</option>
+        <option value="Starter Pack">Starter Pack</option>
+        <option value="Business Lite">Business Lite</option>
+        <option value="Business Pro">Business Pro</option>
+        <option value="Enterprise">Enterprise</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>City</th>
+          <th>Bundle Tier</th>
+          <th>Total Orders</th>
+          <th>Total Spend</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of filteredCustomers" class="clickable-row" (click)="viewCustomer(c)">
+          <td>
+            <div class="cust-left">
+              <img [src]="c.avatar" [alt]="c.name" class="avatar-sm" />
+              <div>
+                <p class="cell-name">{{ c.name }}</p>
+                <p class="cell-sub">{{ c.id }}</p>
+              </div>
+            </div>
+          </td>
+          <td>{{ c.city }}</td>
+          <td>{{ c.bundleTier || '—' }}</td>
+          <td>{{ c.totalOrders }}</td>
+          <td style="font-weight:600;">GHS {{ c.totalSpend | number }}</td>
+          <td>
+            <span class="badge"
+              [ngClass]="{
+                'badge-active': c.accountStatus === 'Active',
+                'badge-cancelled': c.accountStatus === 'Flagged',
+                'badge-inactive': c.accountStatus === 'Suspended'
+              }">{{ c.accountStatus }}</span>
+          </td>
+          <td>
+            <div class="row-actions">
+              <button title="View / Edit" (click)="viewCustomer(c); $event.stopPropagation()"><i class="ri-edit-line"></i></button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filteredCustomers.length === 0">
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="ri-inbox-line"></i>
+              No customers match your filters
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <span class="pagination-info">Showing {{ filteredCustomers.length }} of {{ customers.length }} customers</span>
+    <div class="pagination-controls">
+      <button class="page-btn"><i class="ri-arrow-left-s-line"></i></button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+    </div>
+  </div>
+</section>
+
+<!-- ---- CUSTOMER DETAIL DRAWER ---- -->
+<div class="drawer-overlay" *ngIf="selectedCustomer" (click)="closeDrawer()">
+  <div class="drawer-box" (click)="$event.stopPropagation()">
+
+    <div class="drawer-hdr">
+      <h3 class="modal-title">Customer Profile</h3>
+      <button class="modal-close" (click)="closeDrawer()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <!-- VIEW MODE -->
+    <ng-container *ngIf="!editMode && selectedCustomer">
+      <div class="profile-top">
+        <img [src]="selectedCustomer.avatar" [alt]="selectedCustomer.name" class="avatar-lg" />
+        <div>
+          <p class="profile-name">{{ selectedCustomer.name }}</p>
+          <p class="profile-id">{{ selectedCustomer.id }} · Joined {{ selectedCustomer.joinedDate }}</p>
+          <span class="badge" style="margin-top:6px;"
+            [ngClass]="{
+              'badge-active': selectedCustomer.accountStatus === 'Active',
+              'badge-cancelled': selectedCustomer.accountStatus === 'Flagged',
+              'badge-inactive': selectedCustomer.accountStatus === 'Suspended'
+            }">{{ selectedCustomer.accountStatus }}</span>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-item"><span class="info-label">Phone</span><span class="info-value">{{ selectedCustomer.phone }}</span></div>
+        <div class="info-item"><span class="info-label">Email</span><span class="info-value">{{ selectedCustomer.email }}</span></div>
+        <div class="info-item"><span class="info-label">City</span><span class="info-value">{{ selectedCustomer.city }}</span></div>
+        <div class="info-item"><span class="info-label">Bundle Tier</span><span class="info-value">{{ selectedCustomer.bundleTier || 'None' }}</span></div>
+        <div class="info-item"><span class="info-label">Last Order</span><span class="info-value">{{ selectedCustomer.lastOrder }}</span></div>
+        <div class="info-item"><span class="info-label">Total Orders</span><span class="info-value">{{ selectedCustomer.totalOrders }}</span></div>
+      </div>
+
+      <div class="earnings-box">
+        <span><i class="ri-money-dollar-circle-line"></i> Total Spend</span>
+        <span class="earnings-val">GHS {{ selectedCustomer.totalSpend | number }}</span>
+      </div>
+
+      <div class="drawer-actions">
+        <button class="btn-outline drawer-btn" (click)="startEdit()">
+          <i class="ri-edit-line"></i> Edit Details
+        </button>
+        <button class="btn-green drawer-btn">
+          <i class="ri-refund-2-line"></i> Process Refund
+        </button>
+        <button class="btn-warn drawer-btn" *ngIf="selectedCustomer.accountStatus !== 'Flagged'" (click)="setStatus(selectedCustomer, 'Flagged')">
+          <i class="ri-flag-2-line"></i> Flag Account
+        </button>
+        <button class="btn-green drawer-btn" *ngIf="selectedCustomer.accountStatus !== 'Active'" (click)="setStatus(selectedCustomer, 'Active')">
+          <i class="ri-check-line"></i> Reactivate
+        </button>
+        <button class="btn-danger drawer-btn" *ngIf="selectedCustomer.accountStatus !== 'Suspended'" (click)="setStatus(selectedCustomer, 'Suspended')">
+          <i class="ri-forbid-line"></i> Suspend
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- EDIT MODE -->
+    <ng-container *ngIf="editMode && editBuffer">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" class="form-input" [(ngModel)]="editBuffer.name" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input type="text" class="form-input" [(ngModel)]="editBuffer.phone" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="text" class="form-input" [(ngModel)]="editBuffer.email" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">City</label>
+        <input type="text" class="form-input" [(ngModel)]="editBuffer.city" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bundle Tier</label>
+        <select class="form-select" [(ngModel)]="editBuffer.bundleTier">
+          <option [ngValue]="null">No Bundle</option>
+          <option value="Starter Pack">Starter Pack</option>
+          <option value="Business Lite">Business Lite</option>
+          <option value="Business Pro">Business Pro</option>
+          <option value="Enterprise">Enterprise</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-outline" (click)="cancelEdit()">Cancel</button>
+        <button class="btn-green" (click)="saveEdit()">
+          <i class="ri-check-line"></i> Save Changes
+        </button>
+      </div>
+    </ng-container>
+
+  </div>
+</div>

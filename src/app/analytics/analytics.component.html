@@ -1,0 +1,178 @@
+<!-- ---- EXECUTIVE KPI CARDS ---- -->
+<section class="stats-grid">
+  <div class="stat-card" *ngFor="let kpi of kpis">
+    <div class="stat-icon" [ngClass]="{
+      'icon-blue': kpi.color === 'blue',
+      'icon-green': kpi.color === 'green',
+      'icon-purple': kpi.color === 'purple',
+      'icon-orange': kpi.color === 'orange'
+    }">
+      <i [ngClass]="kpi.icon"></i>
+    </div>
+    <div>
+      <p class="stat-val">{{ kpi.value }}</p>
+      <p class="stat-lbl">{{ kpi.label }}</p>
+    </div>
+    <span class="trend-pill" [ngClass]="kpi.positive ? 'trend-up' : 'trend-down'">
+      <i [ngClass]="kpi.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
+      {{ kpi.change }}
+    </span>
+  </div>
+</section>
+
+<!-- ---- MIDDLE ROW: Weekly Trend + Fleet Health ---- -->
+<section class="mid-row">
+
+  <!-- Weekly Delivery Trend -->
+  <div class="card trend-card">
+    <div class="card-hdr">
+      <h2 class="card-title">Weekly Delivery Trend</h2>
+      <span class="more-dots">···</span>
+    </div>
+    <div class="bar-chart">
+      <div class="bar-col" *ngFor="let d of weeklyTrend">
+        <div class="bar-track">
+          <div class="bar-fill" [style.height.%]="(d.value / maxTrend) * 100">
+            <span class="bar-value">{{ d.value }}</span>
+          </div>
+        </div>
+        <span class="bar-label">{{ d.day }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div class="right-col">
+
+    <!-- Fleet Health -->
+    <div class="card">
+      <div class="card-hdr">
+        <h2 class="card-title">Fleet Health</h2>
+        <span class="more-dots">···</span>
+      </div>
+      <div class="donut-center">
+        <svg viewBox="0 0 200 200" class="donut-svg">
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#f0f0f0" stroke-width="22"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#3dd598" stroke-width="22"
+            [attr.stroke-dasharray]="(fleetHealth.avgBattery * 4.4) + ' 440'"
+            stroke-dashoffset="0"
+            transform="rotate(-90 100 100)" stroke-linecap="round"/>
+          <text x="100" y="94" text-anchor="middle" font-size="28" font-weight="700"
+            fill="#1a1a2e" font-family="Poppins,sans-serif">{{ fleetHealth.avgBattery }}%</text>
+          <text x="100" y="116" text-anchor="middle" font-size="12"
+            fill="#aaa" font-family="Poppins,sans-serif">Avg Battery</text>
+        </svg>
+      </div>
+      <div class="fleet-meta">
+        <div class="fleet-meta-row">
+          <span class="fleet-meta-label"><i class="ri-tools-line"></i> Due Maintenance</span>
+          <span class="fleet-meta-value warn">{{ fleetHealth.dueMaintenance }} vehicles</span>
+        </div>
+        <div class="fleet-meta-row">
+          <span class="fleet-meta-label"><i class="ri-e-bike-2-line"></i> Total Fleet</span>
+          <span class="fleet-meta-value">{{ fleetHealth.totalVehicles }} vehicles</span>
+        </div>
+        <div class="fleet-meta-row">
+          <span class="fleet-meta-label"><i class="ri-road-map-line"></i> Avg Mileage</span>
+          <span class="fleet-meta-value">{{ fleetHealth.avgMileage }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ---- ZONE ANALYSIS + AI PERFORMANCE ---- -->
+<section class="mid-row">
+
+  <!-- Geographic / Zone Analysis -->
+  <div class="card">
+    <div class="card-hdr">
+      <h2 class="card-title">Order Density by Zone</h2>
+      <span class="more-dots">···</span>
+    </div>
+    <div class="zone-list">
+      <div class="zone-row" *ngFor="let zone of zones">
+        <div class="zone-top">
+          <span class="zone-name">{{ zone.name }}</span>
+          <span class="zone-orders">{{ zone.orders }} orders</span>
+        </div>
+        <div class="zone-bar-track">
+          <div class="zone-bar-fill" [style.width.%]="zone.percent * (100/28)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div class="right-col">
+
+    <!-- AI Performance -->
+    <div class="card">
+      <div class="card-hdr">
+        <h2 class="card-title">AI Route Optimization</h2>
+        <span class="more-dots">···</span>
+      </div>
+      <div class="ai-grid">
+        <div class="ai-tile">
+          <i class="ri-time-line ai-icon"></i>
+          <p class="ai-val">{{ aiPerformance.timeSavedPct }}%</p>
+          <p class="ai-lbl">Time Saved</p>
+        </div>
+        <div class="ai-tile">
+          <i class="ri-signpost-line ai-icon"></i>
+          <p class="ai-val">{{ aiPerformance.distanceSavedPct }}%</p>
+          <p class="ai-lbl">Distance Saved</p>
+        </div>
+        <div class="ai-tile">
+          <i class="ri-leaf-line ai-icon"></i>
+          <p class="ai-val">{{ aiPerformance.co2AvoidedKg }}kg</p>
+          <p class="ai-lbl">CO₂ Avoided</p>
+        </div>
+        <div class="ai-tile">
+          <i class="ri-flashlight-line ai-icon"></i>
+          <p class="ai-val">{{ aiPerformance.avgOptTimeMs }}ms</p>
+          <p class="ai-lbl">Avg Opt. Time</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ---- CUSTOMER RETENTION TABLE ---- -->
+<section class="card table-card">
+  <div class="card-hdr">
+    <h2 class="card-title">Customer Retention by Bundle Tier</h2>
+    <span class="more-dots">···</span>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Bundle Tier</th>
+          <th>Renewal Rate</th>
+          <th>Churn Rate</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of retention">
+          <td class="td-track">{{ row.tier }}</td>
+          <td>{{ row.renewalRate }}%</td>
+          <td>{{ row.churn }}%</td>
+          <td>
+            <span class="badge"
+              [ngClass]="{
+                'badge-completed': row.renewalRate >= 70,
+                'badge-pending':   row.renewalRate >= 50 && row.renewalRate < 70,
+                'badge-cancelled': row.renewalRate < 50
+              }">
+              {{ row.renewalRate >= 70 ? 'Healthy' : row.renewalRate >= 50 ? 'Watch' : 'At Risk' }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

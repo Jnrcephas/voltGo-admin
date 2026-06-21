@@ -1,0 +1,217 @@
+<!-- ---- KPI CARDS ---- -->
+<section class="stats-grid">
+  <div class="stat-card" *ngFor="let stat of stats">
+    <div class="stat-icon" [ngClass]="{
+      'icon-blue': stat.color === 'blue',
+      'icon-orange': stat.color === 'orange',
+      'icon-purple': stat.color === 'purple',
+      'icon-green': stat.color === 'green',
+      'icon-red': stat.color === 'red'
+    }">
+      <i [ngClass]="stat.icon"></i>
+    </div>
+    <div>
+      <p class="stat-val">{{ stat.value }}</p>
+      <p class="stat-lbl">{{ stat.label }}</p>
+    </div>
+    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
+      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
+      {{ stat.change }}
+    </span>
+  </div>
+</section>
+
+<!-- ---- REVENUE CHART + PAYMENT SPLIT ---- -->
+<section class="mid-row">
+
+  <div class="card trend-card">
+    <div class="card-hdr">
+      <h2 class="card-title">Weekly Revenue</h2>
+      <button class="btn-outline">
+        <i class="ri-download-2-line"></i> Export
+      </button>
+    </div>
+    <div class="bar-chart">
+      <div class="bar-col" *ngFor="let d of weeklyRevenue">
+        <div class="bar-track">
+          <div class="bar-fill" [style.height.%]="(d.value / maxRevenue) * 100">
+            <span class="bar-value">GHS {{ d.value | number }}</span>
+          </div>
+        </div>
+        <span class="bar-label">{{ d.day }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-col">
+    <div class="card">
+      <div class="card-hdr">
+        <h2 class="card-title">Payment Methods</h2>
+        <span class="more-dots">···</span>
+      </div>
+      <div class="pm-list">
+        <div class="pm-row" *ngFor="let pm of paymentSplit">
+          <div class="pm-top">
+            <span class="pm-name">{{ pm.method }}</span>
+            <span class="pm-percent">{{ pm.percent }}%</span>
+          </div>
+          <div class="pm-track">
+            <div class="pm-fill" [style.width.%]="pm.percent" [style.background]="pm.color"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ---- TABS: TRANSACTIONS / PAYOUTS ---- -->
+<section class="card table-card">
+
+  <div class="tab-bar">
+    <button class="tab-btn" [class.tab-active]="activeTab === 'transactions'" (click)="setTab('transactions')">
+      Transactions
+    </button>
+    <button class="tab-btn" [class.tab-active]="activeTab === 'payouts'" (click)="setTab('payouts')">
+      Rider Payouts
+    </button>
+  </div>
+
+  <div class="card-hdr">
+    <h2 class="card-title">{{ activeTab === 'transactions' ? 'All Transactions' : 'Weekly Payout Cycle' }}</h2>
+    <div class="filter-bar">
+      <div class="search-box">
+        <i class="ri-search-line"></i>
+        <input type="text" placeholder="Search..." [(ngModel)]="searchTerm" />
+      </div>
+      <select class="filter-select" [(ngModel)]="statusFilter">
+        <option value="All">All Status</option>
+        <option *ngIf="activeTab === 'transactions'" value="Success">Success</option>
+        <option value="Pending">Pending</option>
+        <option value="Failed">Failed</option>
+        <option *ngIf="activeTab === 'payouts'" value="Paid">Paid</option>
+      </select>
+      <select class="filter-select" *ngIf="activeTab === 'transactions'" [(ngModel)]="typeFilter">
+        <option value="All">All Types</option>
+        <option value="Bundle Purchase">Bundle Purchase</option>
+        <option value="Pay-Per-Delivery">Pay-Per-Delivery</option>
+        <option value="Refund">Refund</option>
+        <option value="Top-up">Top-up</option>
+      </select>
+      <button class="btn-dark" *ngIf="activeTab === 'payouts'">
+        <i class="ri-send-plane-fill"></i> Process Payouts
+      </button>
+    </div>
+  </div>
+
+  <!-- Transactions table -->
+  <div class="tbl-wrap" *ngIf="activeTab === 'transactions'">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Txn ID</th>
+          <th>Customer</th>
+          <th>Type</th>
+          <th>Method</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let t of filteredTransactions">
+          <td class="td-track">{{ t.txnId }}</td>
+          <td>{{ t.customer }}</td>
+          <td>{{ t.type }}</td>
+          <td>{{ t.method }}</td>
+          <td [style.color]="t.amount < 0 ? '#ef4444' : '#1a1a2e'" style="font-weight:600;">
+            {{ t.amount < 0 ? '-' : '' }}GHS {{ (t.amount < 0 ? -t.amount : t.amount) | number }}
+          </td>
+          <td>
+            <span class="badge"
+              [ngClass]="{
+                'badge-completed': t.status === 'Success',
+                'badge-pending': t.status === 'Pending',
+                'badge-cancelled': t.status === 'Failed'
+              }">{{ t.status }}</span>
+          </td>
+          <td>{{ t.date }}</td>
+        </tr>
+        <tr *ngIf="filteredTransactions.length === 0">
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="ri-inbox-line"></i>
+              No transactions match your filters
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Payouts table -->
+  <div class="tbl-wrap" *ngIf="activeTab === 'payouts'">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Rider</th>
+          <th>Rider ID</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of filteredPayouts">
+          <td>
+            <div class="rider-left">
+              <img [src]="p.avatar" [alt]="p.riderName" class="avatar-sm" />
+              <span style="font-weight:600;color:#1a1a2e;">{{ p.riderName }}</span>
+            </div>
+          </td>
+          <td class="td-track">{{ p.riderId }}</td>
+          <td style="font-weight:600;">GHS {{ p.amount | number }}</td>
+          <td>{{ p.method }}</td>
+          <td>
+            <span class="badge"
+              [ngClass]="{
+                'badge-completed': p.status === 'Paid',
+                'badge-pending': p.status === 'Pending',
+                'badge-cancelled': p.status === 'Failed'
+              }">{{ p.status }}</span>
+          </td>
+          <td>{{ p.date }}</td>
+          <td>
+            <div class="row-actions">
+              <button title="View details"><i class="ri-eye-line"></i></button>
+              <button title="Retry payout" *ngIf="p.status === 'Failed'"><i class="ri-refresh-line"></i></button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filteredPayouts.length === 0">
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="ri-inbox-line"></i>
+              No payouts match your filters
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <span class="pagination-info">
+      Showing {{ activeTab === 'transactions' ? filteredTransactions.length : filteredPayouts.length }} results
+    </span>
+    <div class="pagination-controls">
+      <button class="page-btn"><i class="ri-arrow-left-s-line"></i></button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn">3</button>
+      <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+    </div>
+  </div>
+
+</section>

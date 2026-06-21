@@ -1,0 +1,157 @@
+<!-- ---- KPI CARDS ---- -->
+<section class="stats-grid">
+  <div class="stat-card" *ngFor="let stat of stats">
+    <div class="stat-icon" [ngClass]="{
+      'icon-blue': stat.color === 'blue',
+      'icon-red': stat.color === 'red',
+      'icon-green': stat.color === 'green',
+      'icon-purple': stat.color === 'purple'
+    }">
+      <i [ngClass]="stat.icon"></i>
+    </div>
+    <div>
+      <p class="stat-val">{{ stat.value }}</p>
+      <p class="stat-lbl">{{ stat.label }}</p>
+    </div>
+    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
+      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
+      {{ stat.change }}
+    </span>
+  </div>
+</section>
+
+<!-- ---- LIVE FEEDS GRID ---- -->
+<section class="card feeds-card">
+  <div class="card-hdr">
+    <h2 class="card-title">
+      Live Dashcam Feeds
+      <span class="feed-count">{{ openFeeds.length }}/{{ maxFeeds }}</span>
+    </h2>
+    <button class="btn-dark" (click)="openFeedModal()" [disabled]="openFeeds.length >= maxFeeds">
+      <i class="ri-add-line"></i> Open Feed
+    </button>
+  </div>
+
+  <div class="feeds-grid" *ngIf="openFeeds.length > 0; else noFeeds">
+    <div class="feed-tile" *ngFor="let feed of openFeeds">
+      <div class="feed-video">
+        <div class="feed-live-badge"><span class="live-dot"></span> LIVE</div>
+        <button class="feed-close" (click)="closeFeed(feed.vehicleId)" title="Close feed">
+          <i class="ri-close-line"></i>
+        </button>
+        <i class="ri-vidicon-line feed-placeholder-icon"></i>
+        <span class="feed-res-tag">720p · 15fps</span>
+      </div>
+      <div class="feed-info">
+        <img [src]="feed.riderAvatar" [alt]="feed.riderName" class="avatar-sm" />
+        <div class="feed-info-text">
+          <p class="feed-rider">{{ feed.riderName }}</p>
+          <p class="feed-meta">{{ feed.vehicleId }} · {{ feed.zone }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #noFeeds>
+    <div class="empty-state">
+      <i class="ri-vidicon-line"></i>
+      No live feeds open. Click "Open Feed" to start monitoring a vehicle.
+    </div>
+  </ng-template>
+</section>
+
+<!-- ---- ARCHIVE TABLE ---- -->
+<section class="card table-card">
+  <div class="card-hdr">
+    <h2 class="card-title">Feed Access Audit Log</h2>
+    <div class="filter-bar">
+      <div class="search-box">
+        <i class="ri-search-line"></i>
+        <input type="text" placeholder="Search rider, vehicle, reason..." [(ngModel)]="searchTerm" />
+      </div>
+      <button class="btn-outline">
+        <i class="ri-download-2-line"></i> Export Log
+      </button>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Session</th>
+          <th>Vehicle</th>
+          <th>Rider</th>
+          <th>Admin</th>
+          <th>Justification</th>
+          <th>Duration</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of filteredArchive">
+          <td class="td-track">{{ c.sessionId }}</td>
+          <td>{{ c.vehicleId }}</td>
+          <td>{{ c.riderName }}</td>
+          <td>{{ c.adminUser }}</td>
+          <td>{{ c.justification }}</td>
+          <td>{{ c.startTime }} · {{ c.duration }}</td>
+          <td>{{ c.date }}</td>
+          <td>
+            <div class="row-actions">
+              <button title="Download clip"><i class="ri-download-2-line"></i></button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filteredArchive.length === 0">
+          <td colspan="8">
+            <div class="empty-state">
+              <i class="ri-inbox-line"></i>
+              No archive entries match your search
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="retention-note">
+    <i class="ri-information-line"></i>
+    Dashcam footage is retained for 30 days. Older footage is auto-deleted unless flagged for investigation.
+  </p>
+</section>
+
+<!-- ---- OPEN FEED MODAL ---- -->
+<div class="modal-overlay" *ngIf="showOpenFeedModal" (click)="closeFeedModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Open Dashcam Feed</h3>
+      <button class="modal-close" (click)="closeFeedModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <p class="modal-sub">Access is logged with your admin ID, timestamp, and justification.</p>
+
+    <div class="form-group">
+      <label class="form-label">Select Vehicle</label>
+      <select class="form-select" [(ngModel)]="selectedVehicleToOpen">
+        <option value="" disabled>Choose a vehicle</option>
+        <option *ngFor="let v of availableVehicles" [value]="v.vehicleId">
+          {{ v.vehicleId }} — {{ v.riderName }} ({{ v.zone }})
+        </option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Justification Note (required)</label>
+      <textarea class="form-textarea" rows="3" placeholder="e.g. Investigating customer complaint #876702" [(ngModel)]="justificationText"></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="closeFeedModal()">Cancel</button>
+      <button class="btn-green" (click)="confirmOpenFeed()" [disabled]="!selectedVehicleToOpen || !justificationText.trim()">
+        <i class="ri-vidicon-line"></i> Open Feed
+      </button>
+    </div>
+  </div>
+</div>

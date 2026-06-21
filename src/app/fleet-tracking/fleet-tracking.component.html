@@ -1,0 +1,241 @@
+<!-- ---- KPI CARDS ---- -->
+<section class="stats-grid">
+  <div class="stat-card" *ngFor="let stat of stats">
+    <div class="stat-icon" [ngClass]="{
+      'icon-blue': stat.color === 'blue',
+      'icon-orange': stat.color === 'orange',
+      'icon-purple': stat.color === 'purple',
+      'icon-green': stat.color === 'green',
+      'icon-red': stat.color === 'red'
+    }">
+      <i [ngClass]="stat.icon"></i>
+    </div>
+    <div>
+      <p class="stat-val">{{ stat.value }}</p>
+      <p class="stat-lbl">{{ stat.label }}</p>
+    </div>
+    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
+      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
+      {{ stat.change }}
+    </span>
+  </div>
+</section>
+
+<!-- ---- LIVE MAP + VEHICLE DETAIL ---- -->
+<section class="mid-row">
+
+  <div class="card map-card">
+    <div class="card-hdr">
+      <h2 class="card-title">Live Fleet Map</h2>
+      <button class="btn-dark">
+        <i class="ri-fullscreen-line"></i> Full map
+      </button>
+    </div>
+    <div class="map-box">
+      <iframe
+        src="https://www.openstreetmap.org/export/embed.html?bbox=-0.2802%2C5.5300%2C-0.0800%2C5.7000&layer=mapnik"
+        title="Live Fleet Map"
+        loading="lazy">
+      </iframe>
+      <div class="mpin" *ngFor="let v of filteredVehicles" [style.top]="v.top" [style.left]="v.left"
+        (click)="selectVehicle(v)" [class.mpin-selected]="selectedVehicle?.id === v.id">
+        <div class="mpin-vehicle"
+          [ngClass]="{
+            'mpin-online': v.status === 'Online' && !v.flagged,
+            'mpin-idle': v.status === 'Idle',
+            'mpin-offline': v.status === 'Offline',
+            'mpin-flagged': v.flagged
+          }">
+          <i [ngClass]="v.vehicleType === 'Bicycle' ? 'ri-bike-line' : 'ri-e-bike-2-line'"></i>
+        </div>
+      </div>
+    </div>
+    <div class="map-legend">
+      <span class="ldot ldot-green"></span>
+      <span class="ltext">{{ onlineCount }} Online</span>
+      <span class="ldot ldot-red"></span>
+      <span class="ltext">{{ offlineCount }} Offline</span>
+    </div>
+  </div>
+
+  <!-- Vehicle Detail Panel -->
+  <div class="card detail-card">
+    <div class="card-hdr">
+      <h2 class="card-title">Vehicle Detail</h2>
+      <span class="more-dots">···</span>
+    </div>
+
+    <div *ngIf="!selectedVehicle" class="empty-state">
+      <i class="ri-cursor-line"></i>
+      Click a vehicle on the map to view details
+    </div>
+
+    <div *ngIf="selectedVehicle" class="vehicle-detail">
+      <div class="vd-top">
+        <img [src]="selectedVehicle.riderAvatar" [alt]="selectedVehicle.riderName" class="avatar-md" />
+        <div>
+          <p class="vd-name">{{ selectedVehicle.riderName }}</p>
+          <p class="vd-id">{{ selectedVehicle.id }} · {{ selectedVehicle.vehicleType }}</p>
+        </div>
+      </div>
+
+      <div class="vd-alert" *ngIf="selectedVehicle.flagged">
+        <i class="ri-alarm-warning-fill"></i>
+        {{ selectedVehicle.flagReason }}
+      </div>
+
+      <div class="vd-stat-row">
+        <span class="vd-label"><i class="ri-battery-2-charge-line"></i> Battery</span>
+        <span class="vd-value" [style.color]="selectedVehicle.battery < 25 ? '#ef4444' : '#1a1a2e'">
+          {{ selectedVehicle.battery }}%
+        </span>
+      </div>
+      <div class="vd-stat-row">
+        <span class="vd-label"><i class="ri-speed-up-line"></i> Speed</span>
+        <span class="vd-value" [style.color]="selectedVehicle.speed > 60 ? '#ef4444' : '#1a1a2e'">
+          {{ selectedVehicle.speed }} km/h
+        </span>
+      </div>
+      <div class="vd-stat-row">
+        <span class="vd-label"><i class="ri-shopping-bag-line"></i> Current Order</span>
+        <span class="vd-value">{{ selectedVehicle.currentOrder || 'None' }}</span>
+      </div>
+      <div class="vd-stat-row">
+        <span class="vd-label"><i class="ri-map-pin-line"></i> Zone</span>
+        <span class="vd-value">{{ selectedVehicle.zone }}</span>
+      </div>
+      <div class="vd-stat-row">
+        <span class="vd-label"><i class="ri-time-line"></i> Last Update</span>
+        <span class="vd-value">{{ selectedVehicle.lastUpdate }}</span>
+      </div>
+
+      <div class="vd-actions">
+        <button class="btn-dark vd-btn">
+          <i class="ri-vidicon-line"></i> Dashcam Feed
+        </button>
+        <button class="btn-outline vd-btn" (click)="openPlayback(selectedVehicle)">
+          <i class="ri-history-line"></i> Route Playback
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ---- FLEET TABLE ---- -->
+<section class="card table-card">
+  <div class="card-hdr">
+    <h2 class="card-title">All Vehicles</h2>
+    <div class="filter-bar">
+      <div class="search-box">
+        <i class="ri-search-line"></i>
+        <input type="text" placeholder="Search rider or vehicle ID..." [(ngModel)]="searchTerm" />
+      </div>
+      <select class="filter-select" [(ngModel)]="statusFilter">
+        <option value="All">All Status</option>
+        <option value="Online">Online</option>
+        <option value="Idle">Idle</option>
+        <option value="Offline">Offline</option>
+      </select>
+      <select class="filter-select" [(ngModel)]="zoneFilter">
+        <option value="All">All Zones</option>
+        <option *ngFor="let z of zones" [value]="z">{{ z }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Vehicle ID</th>
+          <th>Rider</th>
+          <th>Type</th>
+          <th>Battery</th>
+          <th>Speed</th>
+          <th>Zone</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let v of filteredVehicles" (click)="selectVehicle(v)" class="clickable-row">
+          <td class="td-track">
+            {{ v.id }}
+            <i *ngIf="v.flagged" class="ri-alarm-warning-fill sla-flag" [title]="v.flagReason"></i>
+          </td>
+          <td>
+            <div class="cust-left">
+              <img [src]="v.riderAvatar" [alt]="v.riderName" class="avatar-sm" />
+              <span style="font-weight:600;color:#1a1a2e;">{{ v.riderName }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="vehicle-tag">
+              <i [ngClass]="v.vehicleType === 'Bicycle' ? 'ri-bike-line' : 'ri-e-bike-2-line'"></i>
+              {{ v.vehicleType }}
+            </span>
+          </td>
+          <td [style.color]="v.battery < 25 ? '#ef4444' : '#444'" style="font-weight:600;">{{ v.battery }}%</td>
+          <td [style.color]="v.speed > 60 ? '#ef4444' : '#444'">{{ v.speed }} km/h</td>
+          <td>{{ v.zone }}</td>
+          <td>
+            <span class="badge"
+              [ngClass]="{
+                'badge-active': v.status === 'Online',
+                'badge-warning': v.status === 'Idle',
+                'badge-inactive': v.status === 'Offline'
+              }">{{ v.status }}</span>
+          </td>
+          <td>
+            <div class="row-actions">
+              <button title="View on map" (click)="selectVehicle(v); $event.stopPropagation()"><i class="ri-map-pin-line"></i></button>
+              <button title="Route playback" (click)="openPlayback(v); $event.stopPropagation()"><i class="ri-history-line"></i></button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filteredVehicles.length === 0">
+          <td colspan="8">
+            <div class="empty-state">
+              <i class="ri-inbox-line"></i>
+              No vehicles match your filters
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ---- ROUTE PLAYBACK MODAL ---- -->
+<div class="modal-overlay" *ngIf="showPlaybackModal" (click)="closePlayback()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Route Playback</h3>
+      <button class="modal-close" (click)="closePlayback()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <p class="modal-sub">{{ playbackTarget?.riderName }} · {{ playbackTarget?.id }}</p>
+
+    <div class="form-group">
+      <label class="form-label">Select Date Range</label>
+      <select class="form-select">
+        <option>Last 24 hours</option>
+        <option>Last 7 days</option>
+        <option>Last 30 days</option>
+        <option>Last 90 days</option>
+      </select>
+    </div>
+
+    <div class="playback-preview">
+      <i class="ri-route-line"></i>
+      <p>Route history will replay here</p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="closePlayback()">Cancel</button>
+      <button class="btn-green">
+        <i class="ri-play-fill"></i> Play Route
+      </button>
+    </div>
+  </div>
+</div>

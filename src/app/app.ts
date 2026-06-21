@@ -1,11 +1,10 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
+import { LayoutComponent } from './layout/layout.component';
 
 @Component({
   selector: 'app-root',
-  templateUrl: './app.html',
-  standalone: false,
-  styleUrl: './app.css'
+  standalone: true,
+  imports: [LayoutComponent],
+  template: '<app-layout></app-layout>'
 })
-export class App {
-  protected readonly title = signal('voltgo-admin');
-}
+export class AppComponent {}

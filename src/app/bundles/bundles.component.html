@@ -1,0 +1,201 @@
+<!-- ---- KPI CARDS ---- -->
+<section class="stats-grid">
+  <div class="stat-card" *ngFor="let stat of stats">
+    <div class="stat-icon" [ngClass]="{
+      'icon-blue': stat.color === 'blue',
+      'icon-orange': stat.color === 'orange',
+      'icon-purple': stat.color === 'purple',
+      'icon-green': stat.color === 'green'
+    }">
+      <i [ngClass]="stat.icon"></i>
+    </div>
+    <div>
+      <p class="stat-val">{{ stat.value }}</p>
+      <p class="stat-lbl">{{ stat.label }}</p>
+    </div>
+    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
+      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
+      {{ stat.change }}
+    </span>
+  </div>
+</section>
+
+<!-- ---- BUNDLE TIER CARDS ---- -->
+<section class="bundle-section">
+  <div class="section-hdr">
+    <h2 class="section-title">Bundle Tiers</h2>
+    <button class="btn-dark" (click)="openCreateModal()">
+      <i class="ri-add-line"></i> Create Bundle
+    </button>
+  </div>
+
+  <div class="bundle-grid">
+    <div class="bundle-tile" *ngFor="let tier of bundleTiers">
+      <div class="bundle-tile-top">
+        <span class="bundle-dot" [style.background]="tier.color"></span>
+        <span class="badge" [ngClass]="tier.active ? 'badge-active' : 'badge-inactive'">
+          {{ tier.active ? 'Active' : 'Inactive' }}
+        </span>
+      </div>
+      <h3 class="bundle-name">{{ tier.name }}</h3>
+      <p class="bundle-price">GHS {{ tier.price | number }}</p>
+      <p class="bundle-credits">{{ tier.credits }} deliveries · {{ tier.validity }} days</p>
+
+      <div class="bundle-meta">
+        <span><i class="ri-discount-percent-line"></i> {{ tier.savings }}% savings</span>
+        <span><i class="ri-group-line"></i> {{ tier.subscribers }} subs</span>
+      </div>
+
+      <div class="bundle-actions">
+        <button class="btn-outline bundle-btn">
+          <i class="ri-edit-line"></i> Edit
+        </button>
+        <button class="btn-icon-only" (click)="toggleBundleActive(tier)" [title]="tier.active ? 'Deactivate' : 'Activate'">
+          <i [ngClass]="tier.active ? 'ri-pause-circle-line' : 'ri-play-circle-line'"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ---- CUSTOMER SUBSCRIPTIONS TABLE ---- -->
+<section class="card table-card">
+  <div class="card-hdr">
+    <h2 class="card-title">Customer Subscriptions</h2>
+    <div class="filter-bar">
+      <div class="search-box">
+        <i class="ri-search-line"></i>
+        <input type="text" placeholder="Search customer..." [(ngModel)]="searchTerm" />
+      </div>
+      <select class="filter-select" [(ngModel)]="tierFilter">
+        <option value="All">All Tiers</option>
+        <option value="Starter Pack">Starter Pack</option>
+        <option value="Business Lite">Business Lite</option>
+        <option value="Business Pro">Business Pro</option>
+        <option value="Enterprise">Enterprise</option>
+      </select>
+      <select class="filter-select" [(ngModel)]="statusFilter">
+        <option value="All">All Status</option>
+        <option value="Active">Active</option>
+        <option value="Expiring Soon">Expiring Soon</option>
+        <option value="Expired">Expired</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Tier</th>
+          <th>Credits</th>
+          <th>Expires</th>
+          <th>Auto-Renew</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let sub of filteredSubscriptions">
+          <td>
+            <div class="cust-left">
+              <img [src]="sub.avatar" [alt]="sub.customer" class="avatar-sm" />
+              <span style="font-weight:600;color:#1a1a2e;">{{ sub.customer }}</span>
+            </div>
+          </td>
+          <td>{{ sub.tier }}</td>
+          <td>
+            <div class="credit-bar-wrap">
+              <span style="font-size:12px;font-weight:600;color:#555;">{{ sub.creditsRemaining }}/{{ sub.creditsTotal }}</span>
+              <div class="credit-track">
+                <div class="credit-fill" [style.width.%]="(sub.creditsRemaining / sub.creditsTotal) * 100"></div>
+              </div>
+            </div>
+          </td>
+          <td>{{ sub.expiresAt }}</td>
+          <td>
+            <i [ngClass]="sub.autoRenew ? 'ri-checkbox-circle-fill' : 'ri-close-circle-line'"
+               [style.color]="sub.autoRenew ? '#22c55e' : '#bbb'" style="font-size:17px;"></i>
+          </td>
+          <td>
+            <span class="badge"
+              [ngClass]="{
+                'badge-active': sub.status === 'Active',
+                'badge-warning': sub.status === 'Expiring Soon',
+                'badge-inactive': sub.status === 'Expired'
+              }">{{ sub.status }}</span>
+          </td>
+          <td>
+            <div class="row-actions">
+              <button title="Apply credits"><i class="ri-add-circle-line"></i></button>
+              <button title="Extend expiry"><i class="ri-calendar-line"></i></button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filteredSubscriptions.length === 0">
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="ri-inbox-line"></i>
+              No subscriptions match your filters
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <span class="pagination-info">Showing {{ filteredSubscriptions.length }} results</span>
+    <div class="pagination-controls">
+      <button class="page-btn"><i class="ri-arrow-left-s-line"></i></button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+    </div>
+  </div>
+</section>
+
+<!-- ---- CREATE BUNDLE MODAL ---- -->
+<div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Create Bundle Tier</h3>
+      <button class="modal-close" (click)="closeCreateModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Bundle Name</label>
+      <input type="text" class="form-input" placeholder="e.g. Campus Saver" [(ngModel)]="newBundle.name" />
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Credits Included</label>
+        <input type="number" class="form-input" [(ngModel)]="newBundle.credits" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Price (GHS)</label>
+        <input type="number" class="form-input" [(ngModel)]="newBundle.price" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Validity (days)</label>
+        <input type="number" class="form-input" [(ngModel)]="newBundle.validity" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Savings (%)</label>
+        <input type="number" class="form-input" [(ngModel)]="newBundle.savings" />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="closeCreateModal()">Cancel</button>
+      <button class="btn-green" (click)="saveBundle()">
+        <i class="ri-check-line"></i> Create Bundle
+      </button>
+    </div>
+  </div>
+</div>

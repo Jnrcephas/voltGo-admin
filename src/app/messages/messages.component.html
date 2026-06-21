@@ -1,0 +1,107 @@
+<section class="messages-shell">
+
+  <!-- ---- CONVERSATION LIST ---- -->
+  <div class="conv-panel">
+    <div class="conv-panel-hdr">
+      <h2 class="card-title">Messages</h2>
+      <button class="btn-dark" (click)="openBroadcast()">
+        <i class="ri-megaphone-line"></i> Broadcast
+      </button>
+    </div>
+
+    <div class="search-box conv-search">
+      <i class="ri-search-line"></i>
+      <input type="text" placeholder="Search conversations..." [(ngModel)]="searchTerm" />
+    </div>
+
+    <div class="tab-bar conv-tabs">
+      <button class="tab-btn" [class.tab-active]="audienceFilter === 'All'" (click)="audienceFilter = 'All'">All</button>
+      <button class="tab-btn" [class.tab-active]="audienceFilter === 'Riders'" (click)="audienceFilter = 'Riders'">Riders</button>
+      <button class="tab-btn" [class.tab-active]="audienceFilter === 'Customers'" (click)="audienceFilter = 'Customers'">Customers</button>
+    </div>
+
+    <div class="conv-list">
+      <div class="conv-item" *ngFor="let c of filteredConversations"
+        [class.conv-active]="selectedConversation?.id === c.id"
+        (click)="selectConversation(c)">
+        <img [src]="c.avatar" [alt]="c.name" class="avatar-sm" />
+        <div class="conv-text">
+          <div class="conv-top">
+            <span class="conv-name">{{ c.name }}</span>
+            <span class="conv-time">{{ c.lastTime }}</span>
+          </div>
+          <div class="conv-bottom">
+            <span class="conv-preview">{{ c.lastMessage }}</span>
+            <span class="conv-unread" *ngIf="c.unread > 0">{{ c.unread }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="filteredConversations.length === 0">
+        <i class="ri-inbox-line"></i>
+        No conversations found
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- CHAT WINDOW ---- -->
+  <div class="chat-panel" *ngIf="selectedConversation">
+    <div class="chat-hdr">
+      <img [src]="selectedConversation.avatar" [alt]="selectedConversation.name" class="avatar-sm" />
+      <div>
+        <p class="chat-name">{{ selectedConversation.name }}</p>
+        <p class="chat-role">{{ selectedConversation.role }}</p>
+      </div>
+      <button class="btn-icon-only" style="margin-left:auto;" title="View profile">
+        <i class="ri-user-line"></i>
+      </button>
+    </div>
+
+    <div class="chat-body">
+      <div class="chat-bubble-row" *ngFor="let m of currentChat" [class.from-me]="m.fromMe">
+        <div class="chat-bubble">
+          {{ m.text }}
+          <span class="chat-time">{{ m.time }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input-row">
+      <input type="text" placeholder="Type a message..." [(ngModel)]="newMessageText" (keyup.enter)="sendMessage()" />
+      <button class="btn-green" (click)="sendMessage()">
+        <i class="ri-send-plane-fill"></i>
+      </button>
+    </div>
+  </div>
+
+</section>
+
+<!-- ---- BROADCAST MODAL ---- -->
+<div class="modal-overlay" *ngIf="showBroadcastModal" (click)="closeBroadcast()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Broadcast Message</h3>
+      <button class="modal-close" (click)="closeBroadcast()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Audience</label>
+      <select class="form-select" [(ngModel)]="broadcastAudience">
+        <option value="All Riders">All Riders</option>
+        <option value="All Customers">All Customers</option>
+        <option value="Specific Zone">Specific Zone</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Message</label>
+      <textarea class="form-textarea" rows="4" placeholder="Type your broadcast message..." [(ngModel)]="broadcastText"></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="closeBroadcast()">Cancel</button>
+      <button class="btn-green" (click)="sendBroadcast()" [disabled]="!broadcastText.trim()">
+        <i class="ri-send-plane-fill"></i> Send Broadcast
+      </button>
+    </div>
+  </div>
+</div>

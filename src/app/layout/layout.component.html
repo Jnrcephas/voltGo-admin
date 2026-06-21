@@ -1,0 +1,113 @@
+<div class="layout">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="sidebar" [class.sidebar-open]="sidebarOpen">
+
+    <div class="sidebar-top">
+      <div class="logo">
+        <div class="logo-box">
+          <span class="logo-volt">Volt</span><span class="logo-go">GO</span>
+        </div>
+      </div>
+      <button class="close-btn" (click)="toggleSidebar()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item" routerLink="/dashboard" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-dashboard-fill nav-icon"></i>
+        <span>Dashboard</span>
+      </a>
+      <a class="nav-item" routerLink="/analytics" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-bar-chart-line nav-icon"></i>
+        <span>Analytics</span>
+      </a>
+      <a class="nav-item" routerLink="/finance" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-bank-card-line nav-icon"></i>
+        <span>Finance</span>
+      </a>
+      <a class="nav-item" routerLink="/bundles" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-gift-line nav-icon"></i>
+        <span>Bundles</span>
+      </a>
+      <a class="nav-item" routerLink="/orders" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-shopping-bag-line nav-icon"></i>
+        <span>Orders</span>
+      </a>
+      <a class="nav-item" routerLink="/fleet-tracking" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-map-pin-line nav-icon"></i>
+        <span>Fleet Tracking</span>
+      </a>
+      <a class="nav-item" routerLink="/dashcam" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-computer-line nav-icon"></i>
+        <span>Dashcam Monitor</span>
+      </a>
+      <a class="nav-item" routerLink="/riders" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-e-bike-line nav-icon"></i>
+        <span>Riders</span>
+      </a>
+      <a class="nav-item" routerLink="/kyc" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-file-shield-2-line nav-icon"></i>
+        <span>KYC Submissions</span>
+      </a>
+      <a class="nav-item" routerLink="/vehicles" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-e-bike-2-line nav-icon"></i>
+        <span>Vehicles</span>
+      </a>
+      <a class="nav-item" routerLink="/customers" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-group-line nav-icon"></i>
+        <span>Customers</span>
+      </a>
+      <a class="nav-item" routerLink="/messages" routerLinkActive="nav-active" (click)="closeSidebar()">
+        <i class="ri-chat-1-line nav-icon"></i>
+        <span>Messages</span>
+      </a>
+      <a class="nav-item" href="#">
+        <i class="ri-shield-user-line nav-icon"></i>
+        <span>User Roles</span>
+      </a>
+      <a class="nav-item" href="#">
+        <i class="ri-settings-3-line nav-icon"></i>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <img src="https://i.pravatar.cc/40?img=3" alt="Cephas" class="avatar-sm" />
+      <div class="uinfo">
+        <span class="uname">Cephas</span>
+        <span class="urole">Super admin</span>
+      </div>
+      <i class="ri-arrow-down-s-line" style="color:#bbb; margin-left:auto;"></i>
+    </div>
+
+  </aside>
+
+  <div class="overlay" [class.overlay-show]="sidebarOpen" (click)="toggleSidebar()"></div>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" (click)="toggleSidebar()">
+          <i class="ri-menu-line"></i>
+        </button>
+        <h1 class="page-title">{{ currentTitle }}</h1>
+      </div>
+      <div class="topbar-right">
+        <img src="https://i.pravatar.cc/40?img=3" alt="Cephas" class="avatar-sm" />
+        <div class="uinfo">
+          <span class="uname">Cephas</span>
+          <span class="urole">Super admin</span>
+        </div>
+        <i class="ri-arrow-down-s-line" style="color:#bbb;"></i>
+      </div>
+    </header>
+
+    <!-- Page content renders here -->
+    <router-outlet></router-outlet>
+
+  </main>
+</div>

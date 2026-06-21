@@ -1,0 +1,157 @@
+<!-- ---- STATS CARDS ---- -->
+<section class="stats-grid">
+  <div class="stat-card" *ngFor="let stat of stats">
+    <div class="stat-icon" [ngClass]="{
+      'icon-blue': stat.color === 'blue',
+      'icon-orange': stat.color === 'orange',
+      'icon-purple': stat.color === 'purple',
+      'icon-green': stat.color === 'green'
+    }">
+      <i [ngClass]="stat.icon"></i>
+    </div>
+    <div>
+      <p class="stat-val">{{ stat.value }}</p>
+      <p class="stat-lbl">{{ stat.label }}</p>
+    </div>
+    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
+      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
+      {{ stat.change }}
+    </span>
+  </div>
+
+</section>
+
+<!-- ---- MIDDLE ROW ---- -->
+<section class="mid-row">
+
+  <!-- Fleet Map -->
+  <div class="card map-card">
+    <div class="card-hdr">
+      <h2 class="card-title">Fleet Live Location</h2>
+      <button class="btn-dark">Full map</button>
+    </div>
+    <div class="map-box">
+      <iframe
+        src="https://www.openstreetmap.org/export/embed.html?bbox=-0.2802%2C5.5300%2C-0.0800%2C5.7000&layer=mapnik"
+        title="Fleet Map"
+        loading="lazy">
+      </iframe>
+      <div class="mpin" style="top:42%;left:38%">
+        <div class="mpin-orange"><i class="ri-restaurant-fill"></i></div>
+      </div>
+      <div class="mpin" style="top:28%;left:74%">
+        <div class="mpin-grey"><i class="ri-map-pin-fill"></i></div>
+      </div>
+      <div class="mpin" style="top:55%;left:24%">
+        <div class="mpin-ring"></div>
+      </div>
+      <div class="mpin" style="top:62%;left:48%">
+        <div class="mpin-ring"></div>
+      </div>
+      <div class="mpin" style="top:50%;left:60%">
+        <div class="mpin-ring"></div>
+      </div>
+      <div class="mpin" style="top:70%;left:64%">
+        <div class="mpin-ring"></div>
+      </div>
+    </div>
+    <div class="map-legend">
+      <span class="ldot ldot-green"></span>
+      <span class="ltext">100 Online</span>
+      <span class="ldot ldot-red"></span>
+      <span class="ltext">12 Offline</span>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div class="right-col">
+
+    <!-- Donut chart -->
+    <div class="card">
+      <div class="card-hdr">
+        <h2 class="card-title">Orders Analytics</h2>
+        <span class="more-dots">···</span>
+      </div>
+      <div class="donut-center">
+        <svg viewBox="0 0 200 200" class="donut-svg">
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#f0f0f0" stroke-width="22"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#ff6b4a" stroke-width="22"
+            stroke-dasharray="44 396" stroke-dashoffset="0"
+            transform="rotate(-90 100 100)" stroke-linecap="round"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#ffc542" stroke-width="22"
+            stroke-dasharray="44 396" stroke-dashoffset="-44"
+            transform="rotate(-90 100 100)" stroke-linecap="round"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#3dd598" stroke-width="22"
+            stroke-dasharray="352 88" stroke-dashoffset="-88"
+            transform="rotate(-90 100 100)" stroke-linecap="round"/>
+          <text x="100" y="94" text-anchor="middle" font-size="28" font-weight="700"
+            fill="#1a1a2e" font-family="Poppins,sans-serif">80%</text>
+          <text x="100" y="116" text-anchor="middle" font-size="12"
+            fill="#aaa" font-family="Poppins,sans-serif">Orders</text>
+        </svg>
+      </div>
+      <div class="donut-legend">
+        <span class="dl-item"><span class="dl-dot" style="background:#3dd598"></span>Completed</span>
+        <span class="dl-item"><span class="dl-dot" style="background:#ffc542"></span>Pending</span>
+        <span class="dl-item"><span class="dl-dot" style="background:#ff6b4a"></span>Cancelled</span>
+      </div>
+    </div>
+
+    <!-- Top riders -->
+    <div class="card">
+      <h2 class="card-title" style="margin-bottom:14px;">Most Completed Orders Today</h2>
+      <div class="riders-hdr">
+        <span>Rider Name</span>
+        <span>Total Completed Order</span>
+      </div>
+      <div class="rider-row" *ngFor="let rider of topRiders">
+        <div class="rider-left">
+          <img [src]="rider.avatar" [alt]="rider.name" class="avatar-sm" />
+          <div>
+            <p class="rider-name">{{ rider.name }}</p>
+            <p class="rider-email">{{ rider.email }}</p>
+          </div>
+        </div>
+        <span class="rider-count">{{ rider.count }}</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ---- RECENT ORDERS TABLE ---- -->
+<section class="card table-card">
+  <div class="card-hdr">
+    <h2 class="card-title">Recent Orders</h2>
+    <span class="more-dots">···</span>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Tracking no</th>
+          <th>Rider Name</th>
+          <th>Pick up</th>
+          <th>Drop off</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of recentOrders">
+          <td class="td-track">{{ order.trackingNo }}</td>
+          <td>{{ order.riderName }}</td>
+          <td>{{ order.pickup }}</td>
+          <td>{{ order.dropoff }}</td>
+          <td>
+            <span class="badge"
+              [ngClass]="{
+                'badge-pending':   order.status === 'Pending',
+                'badge-completed': order.status === 'Completed',
+                'badge-cancelled': order.status === 'Cancelled'
+              }">{{ order.status }}</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

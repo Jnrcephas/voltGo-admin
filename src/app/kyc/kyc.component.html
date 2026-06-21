@@ -1,0 +1,185 @@
+<!-- ---- KPI CARDS ---- -->
+<section class="stats-grid">
+  <div class="stat-card" *ngFor="let stat of stats">
+    <div class="stat-icon" [ngClass]="{
+      'icon-blue': stat.color === 'blue',
+      'icon-orange': stat.color === 'orange',
+      'icon-green': stat.color === 'green',
+      'icon-red': stat.color === 'red'
+    }">
+      <i [ngClass]="stat.icon"></i>
+    </div>
+    <div>
+      <p class="stat-val">{{ stat.value }}</p>
+      <p class="stat-lbl">{{ stat.label }}</p>
+    </div>
+    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
+      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
+      {{ stat.change }}
+    </span>
+  </div>
+</section>
+
+<!-- ---- SUBMISSIONS TABLE ---- -->
+<section class="card table-card">
+  <div class="card-hdr">
+    <h2 class="card-title">KYC Submissions</h2>
+    <div class="filter-bar">
+      <div class="search-box">
+        <i class="ri-search-line"></i>
+        <input type="text" placeholder="Search applicant or ID..." [(ngModel)]="searchTerm" />
+      </div>
+      <select class="filter-select" [(ngModel)]="statusFilter">
+        <option value="All">All Status</option>
+        <option value="Pending">Pending</option>
+        <option value="Approved">Approved</option>
+        <option value="Rejected">Rejected</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Applicant</th>
+          <th>Vehicle Type</th>
+          <th>Ghana Card No.</th>
+          <th>Submitted</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let s of filteredSubmissions" class="clickable-row" (click)="reviewSubmission(s)">
+          <td>
+            <div class="cust-left">
+              <img [src]="s.avatar" [alt]="s.applicantName" class="avatar-sm" />
+              <div>
+                <p class="cell-name">{{ s.applicantName }}</p>
+                <p class="cell-sub">{{ s.id }}</p>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="vehicle-tag">
+              <i [ngClass]="s.vehicleType === 'Bicycle' ? 'ri-bike-line' : 'ri-e-bike-2-line'"></i>
+              {{ s.vehicleType }}
+            </span>
+          </td>
+          <td>{{ s.ghanaCardNo }}</td>
+          <td>{{ s.submittedAt }}</td>
+          <td>
+            <span class="badge"
+              [ngClass]="{
+                'badge-warning': s.status === 'Pending',
+                'badge-active': s.status === 'Approved',
+                'badge-cancelled': s.status === 'Rejected'
+              }">{{ s.status }}</span>
+          </td>
+          <td>
+            <div class="row-actions">
+              <button title="Review submission" (click)="reviewSubmission(s); $event.stopPropagation()"><i class="ri-eye-line"></i></button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filteredSubmissions.length === 0">
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="ri-inbox-line"></i>
+              No submissions match your filters
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ---- REVIEW DRAWER ---- -->
+<div class="drawer-overlay" *ngIf="selectedSubmission" (click)="closeReview()">
+  <div class="drawer-box" (click)="$event.stopPropagation()">
+
+    <div class="drawer-hdr">
+      <h3 class="modal-title">KYC Review</h3>
+      <button class="modal-close" (click)="closeReview()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="profile-top">
+      <img [src]="selectedSubmission.avatar" [alt]="selectedSubmission.applicantName" class="avatar-lg" />
+      <div>
+        <p class="profile-name">{{ selectedSubmission.applicantName }}</p>
+        <p class="profile-id">{{ selectedSubmission.id }} · {{ selectedSubmission.submittedAt }}</p>
+        <span class="badge" style="margin-top:6px;"
+          [ngClass]="{
+            'badge-warning': selectedSubmission.status === 'Pending',
+            'badge-active': selectedSubmission.status === 'Approved',
+            'badge-cancelled': selectedSubmission.status === 'Rejected'
+          }">{{ selectedSubmission.status }}</span>
+      </div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-item"><span class="info-label">Phone</span><span class="info-value">{{ selectedSubmission.phone }}</span></div>
+      <div class="info-item"><span class="info-label">Vehicle Type</span><span class="info-value">{{ selectedSubmission.vehicleType }}</span></div>
+      <div class="info-item" style="grid-column: 1 / -1;"><span class="info-label">Ghana Card No.</span><span class="info-value">{{ selectedSubmission.ghanaCardNo }}</span></div>
+    </div>
+
+    <h4 class="section-sub-title">Submitted Documents</h4>
+    <div class="doc-grid">
+      <div class="doc-item">
+        <img [src]="selectedSubmission.ghanaCardFront" alt="Ghana Card Front" />
+        <span>Ghana Card (Front)</span>
+      </div>
+      <div class="doc-item">
+        <img [src]="selectedSubmission.ghanaCardBack" alt="Ghana Card Back" />
+        <span>Ghana Card (Back)</span>
+      </div>
+      <div class="doc-item" *ngIf="selectedSubmission.driversLicense">
+        <img [src]="selectedSubmission.driversLicense" alt="Driver's License" />
+        <span>Driver's License</span>
+      </div>
+      <div class="doc-item doc-missing" *ngIf="!selectedSubmission.driversLicense">
+        <i class="ri-file-warning-line"></i>
+        <span>No Driver's License submitted</span>
+      </div>
+    </div>
+
+    <div class="rejection-note" *ngIf="selectedSubmission.status === 'Rejected'">
+      <i class="ri-close-circle-fill"></i>
+      <span>{{ selectedSubmission.rejectionReason }}</span>
+    </div>
+
+    <div class="drawer-actions" *ngIf="selectedSubmission.status === 'Pending'">
+      <button class="btn-danger drawer-btn" (click)="openRejectModal()">
+        <i class="ri-close-line"></i> Reject
+      </button>
+      <button class="btn-green drawer-btn" (click)="approve()">
+        <i class="ri-check-line"></i> Approve
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ---- REJECT REASON MODAL ---- -->
+<div class="modal-overlay" *ngIf="showRejectModal" (click)="closeRejectModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Reject Submission</h3>
+      <button class="modal-close" (click)="closeRejectModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Reason for Rejection (required)</label>
+      <textarea class="form-textarea" rows="3" placeholder="e.g. Ghana Card image unreadable" [(ngModel)]="rejectReasonText"></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="closeRejectModal()">Cancel</button>
+      <button class="btn-danger" (click)="confirmReject()" [disabled]="!rejectReasonText.trim()">
+        <i class="ri-close-line"></i> Confirm Rejection
+      </button>
+    </div>
+  </div>
+</div>
