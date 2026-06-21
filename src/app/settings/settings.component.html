@@ -1,0 +1,297 @@
+<div class="settings-shell">
+
+  <!-- ---- SETTINGS NAV ---- -->
+  <div class="settings-nav">
+    <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'general'" (click)="setTab('general')">
+      <i class="ri-building-line"></i> General
+    </button>
+    <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'pricing'" (click)="setTab('pricing')">
+      <i class="ri-price-tag-3-line"></i> Pricing & Surge
+    </button>
+    <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'ai'" (click)="setTab('ai')">
+      <i class="ri-robot-2-line"></i> AI Settings
+    </button>
+    <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'notifications'" (click)="setTab('notifications')">
+      <i class="ri-notification-3-line"></i> Notifications
+    </button>
+    <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'security'" (click)="setTab('security')">
+      <i class="ri-shield-keyhole-line"></i> Security
+    </button>
+  </div>
+
+  <!-- ---- SETTINGS CONTENT ---- -->
+  <div class="settings-content">
+
+    <!-- GENERAL -->
+    <div class="card" *ngIf="activeTab === 'general'">
+      <div class="card-hdr">
+        <h2 class="card-title">Company Profile</h2>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Company Name</label>
+          <input type="text" class="form-input" [(ngModel)]="general.companyName" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Support Email</label>
+          <input type="email" class="form-input" [(ngModel)]="general.supportEmail" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Support Phone</label>
+          <input type="text" class="form-input" [(ngModel)]="general.supportPhone" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Default Language</label>
+          <select class="form-select" [(ngModel)]="general.defaultLanguage">
+            <option value="English">English</option>
+            <option value="Twi">Twi</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Timezone</label>
+        <select class="form-select" [(ngModel)]="general.timezone">
+          <option value="GMT (Accra)">GMT (Accra)</option>
+          <option value="UTC">UTC</option>
+        </select>
+      </div>
+
+      <h3 class="settings-subhdr">Operating Cities</h3>
+      <p class="settings-hint">Enable cities where VoltGo currently operates. Per the rollout plan, Accra launches first, expanding to Kumasi, Tema, and Takoradi.</p>
+      <div class="city-grid">
+        <label class="city-toggle" *ngFor="let city of cities">
+          <span>{{ city }}</span>
+          <input type="checkbox" [(ngModel)]="enabledCities[city]" />
+        </label>
+      </div>
+    </div>
+
+    <!-- PRICING & SURGE -->
+    <div class="card" *ngIf="activeTab === 'pricing'">
+      <div class="card-hdr">
+        <h2 class="card-title">Base Pricing</h2>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Base Fare — Bicycle (GHS)</label>
+          <input type="number" class="form-input" [(ngModel)]="pricing.baseFareBicycle" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Base Fare — E-Motorcycle (GHS)</label>
+          <input type="number" class="form-input" [(ngModel)]="pricing.baseFareMoto" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Per KM Rate (GHS)</label>
+          <input type="number" class="form-input" [(ngModel)]="pricing.perKmRate" step="0.1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Long-Distance Credit Cost</label>
+          <input type="number" class="form-input" [(ngModel)]="pricing.longDistanceCredits" />
+        </div>
+      </div>
+
+      <h3 class="settings-subhdr">Dynamic Surge Pricing</h3>
+      <p class="settings-hint">Surge activates automatically when the demand-to-supply ratio exceeds the threshold below, per zone.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Surge Trigger Threshold (demand:supply)</label>
+          <input type="number" class="form-input" [(ngModel)]="pricing.surgeThreshold" step="0.1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Min Surge Multiplier</label>
+          <input type="number" class="form-input" [(ngModel)]="pricing.surgeMin" step="0.1" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Max Surge Multiplier (cap)</label>
+        <input type="number" class="form-input" [(ngModel)]="pricing.surgeMax" step="0.1" />
+      </div>
+
+      <div class="surge-preview">
+        <i class="ri-flashlight-line"></i>
+        Surge will range between <strong>{{ pricing.surgeMin }}x</strong> and <strong>{{ pricing.surgeMax }}x</strong> when demand exceeds <strong>{{ pricing.surgeThreshold }}:1</strong> in a zone.
+      </div>
+    </div>
+
+    <!-- AI SETTINGS -->
+    <div class="card" *ngIf="activeTab === 'ai'">
+      <div class="card-hdr">
+        <h2 class="card-title">Route Optimization Engine</h2>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <p class="toggle-label">AI Route Optimization</p>
+          <p class="toggle-sub">Use OR-Tools VRPTW solver to optimize rider routes</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" [(ngModel)]="ai.routeOptimizationEnabled" />
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Re-optimization Interval (seconds)</label>
+        <input type="number" class="form-input" [(ngModel)]="ai.reoptimizeIntervalSec" [disabled]="!ai.routeOptimizationEnabled" />
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <p class="toggle-label">Order Batching</p>
+          <p class="toggle-sub">Combine nearby orders onto a single rider trip</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" [(ngModel)]="ai.batchingEnabled" />
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Max Batch Orders — E-Motorcycle</label>
+          <input type="number" class="form-input" [(ngModel)]="ai.maxBatchOrdersMoto" [disabled]="!ai.batchingEnabled" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Batch Orders — Bicycle</label>
+          <input type="number" class="form-input" [(ngModel)]="ai.maxBatchOrdersBike" [disabled]="!ai.batchingEnabled" />
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <p class="toggle-label">Demand Forecasting</p>
+          <p class="toggle-sub">Predict order demand by zone and hour for proactive rider positioning</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" [(ngModel)]="ai.demandForecastEnabled" />
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <h3 class="settings-subhdr">AI Safety Monitoring</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Speed Anomaly Threshold (km/h)</label>
+          <input type="number" class="form-input" [(ngModel)]="ai.speedAnomalyThreshold" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Idle Anomaly Threshold (minutes)</label>
+          <input type="number" class="form-input" [(ngModel)]="ai.idleAnomalyMinutes" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ETA Accuracy Target (± minutes)</label>
+        <input type="number" class="form-input" [(ngModel)]="ai.etaAccuracyTargetMin" />
+      </div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div class="card" *ngIf="activeTab === 'notifications'">
+      <div class="card-hdr">
+        <h2 class="card-title">Admin Notification Preferences</h2>
+      </div>
+
+      <div class="toggle-row">
+        <div><p class="toggle-label">New Order Alerts</p><p class="toggle-sub">Notify when a new order is placed</p></div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.orderAlerts" /><span class="switch-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><p class="toggle-label">Rider SOS Alerts</p><p class="toggle-sub">Immediate alert on rider emergency button press</p></div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.riderSOS" /><span class="switch-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><p class="toggle-label">New KYC Submissions</p><p class="toggle-sub">Notify when a rider submits documents for review</p></div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.kycSubmissions" /><span class="switch-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><p class="toggle-label">Payment Failures</p><p class="toggle-sub">Notify on failed Mobile Money or card transactions</p></div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.paymentFailures" /><span class="switch-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><p class="toggle-label">SLA Breaches</p><p class="toggle-sub">Notify when an order exceeds promised ETA</p></div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.slaBreaches" /><span class="switch-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><p class="toggle-label">Weekly Report Emails</p><p class="toggle-sub">Auto-send scheduled analytics reports</p></div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.weeklyReports" /><span class="switch-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><p class="toggle-label">Marketing Emails</p><p class="toggle-sub">Product updates and announcements</p></div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.marketingEmails" /><span class="switch-slider"></span></label>
+      </div>
+    </div>
+
+    <!-- SECURITY -->
+    <div class="card" *ngIf="activeTab === 'security'">
+      <div class="card-hdr">
+        <h2 class="card-title">Security Settings</h2>
+      </div>
+
+      <div class="toggle-row">
+        <div><p class="toggle-label">Require Two-Factor Authentication</p><p class="toggle-sub">All admin users must enable 2FA to sign in</p></div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="security.twoFactorRequired" /><span class="switch-slider"></span></label>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Session Timeout (minutes)</label>
+          <input type="number" class="form-input" [(ngModel)]="security.sessionTimeoutMin" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password Expiry (days)</label>
+          <input type="number" class="form-input" [(ngModel)]="security.passwordExpiryDays" />
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <div><p class="toggle-label">IP Restriction</p><p class="toggle-sub">Limit admin portal access to approved IP ranges</p></div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="security.ipRestrictionEnabled" /><span class="switch-slider"></span></label>
+      </div>
+
+      <h3 class="settings-subhdr">Recent Login Activity</h3>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Admin</th>
+              <th>Device</th>
+              <th>Location</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let log of loginHistory">
+              <td style="font-weight:600;color:#1a1a2e;">{{ log.admin }}</td>
+              <td>{{ log.device }}</td>
+              <td>{{ log.location }}</td>
+              <td>{{ log.time }}</td>
+              <td>
+                <span class="badge" [ngClass]="log.status === 'Success' ? 'badge-active' : 'badge-cancelled'">
+                  {{ log.status }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SAVE BAR -->
+    <div class="save-bar">
+      <span class="save-confirm" *ngIf="saved"><i class="ri-checkbox-circle-fill"></i> Settings saved</span>
+      <button class="btn-outline">Discard Changes</button>
+      <button class="btn-green" (click)="saveSettings()">
+        <i class="ri-save-line"></i> Save Changes
+      </button>
+    </div>
+
+  </div>
+</div>

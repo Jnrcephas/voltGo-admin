@@ -11,6 +11,8 @@ import { KycComponent } from './kyc/kyc.component';
 import { VehiclesComponent } from './vehicles/vehicles.component';
 import { CustomersComponent } from './customers/customers.component';
 import { MessagesComponent } from './messages/messages.component';
+import { UserRolesComponent } from './user-roles/user-roles.component';
+import { SettingsComponent } from './settings/settings.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -26,4 +28,6 @@ export const routes: Routes = [
   { path: 'vehicles', component: VehiclesComponent },
   { path: 'customers', component: CustomersComponent },
   { path: 'messages', component: MessagesComponent },
+  { path: 'user-roles', component: UserRolesComponent },
+  { path: 'settings', component: SettingsComponent },
 ];

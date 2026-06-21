@@ -28,6 +28,8 @@ export class LayoutComponent {
     'vehicles': 'Vehicles',
     'customers': 'Customers',
     'messages': 'Messages',
+    'user-roles': 'User Roles',
+    'settings': 'Settings',
   };
 
   constructor(private router: Router) {

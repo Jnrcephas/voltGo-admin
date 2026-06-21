@@ -1,0 +1,181 @@
+<!-- ---- KPI CARDS ---- -->
+<section class="stats-grid">
+  <div class="stat-card" *ngFor="let stat of stats">
+    <div class="stat-icon" [ngClass]="{
+      'icon-blue': stat.color === 'blue',
+      'icon-orange': stat.color === 'orange',
+      'icon-purple': stat.color === 'purple',
+      'icon-red': stat.color === 'red'
+    }">
+      <i [ngClass]="stat.icon"></i>
+    </div>
+    <div>
+      <p class="stat-val">{{ stat.value }}</p>
+      <p class="stat-lbl">{{ stat.label }}</p>
+    </div>
+    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
+      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
+      {{ stat.change }}
+    </span>
+  </div>
+</section>
+
+<!-- ---- ROLE CARDS ---- -->
+<section class="role-section">
+  <div class="section-hdr">
+    <h2 class="section-title">Roles & Permissions</h2>
+  </div>
+
+  <div class="role-grid">
+    <div class="role-tile" *ngFor="let role of roles" (click)="viewRole(role)">
+      <div class="role-tile-top">
+        <span class="role-dot" [style.background]="role.color"></span>
+        <span class="role-access-tag">{{ role.accessLevel }}</span>
+      </div>
+      <h3 class="role-name">{{ role.name }}</h3>
+      <p class="role-desc">{{ role.description }}</p>
+      <div class="role-footer">
+        <span><i class="ri-group-line"></i> {{ role.userCount }} users</span>
+        <span class="role-edit-link"><i class="ri-edit-line"></i> Edit Permissions</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ---- ADMIN USERS TABLE ---- -->
+<section class="card table-card">
+  <div class="card-hdr">
+    <h2 class="card-title">Admin Users</h2>
+    <div class="filter-bar">
+      <div class="search-box">
+        <i class="ri-search-line"></i>
+        <input type="text" placeholder="Search name or email..." [(ngModel)]="searchTerm" />
+      </div>
+      <select class="filter-select" [(ngModel)]="roleFilter">
+        <option value="All">All Roles</option>
+        <option *ngFor="let r of roles" [value]="r.id">{{ r.name }}</option>
+      </select>
+      <button class="btn-dark" (click)="openInviteModal()">
+        <i class="ri-user-add-line"></i> Invite Admin
+      </button>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Admin User</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Last Active</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of filteredUsers">
+          <td>
+            <div class="cust-left">
+              <img [src]="u.avatar" [alt]="u.name" class="avatar-sm" />
+              <span class="cell-name">{{ u.name }}</span>
+            </div>
+          </td>
+          <td>{{ u.email }}</td>
+          <td>
+            <span class="role-pill" [style.background]="roleColor(u.roleId) + '1A'" [style.color]="roleColor(u.roleId)">
+              {{ roleName(u.roleId) }}
+            </span>
+          </td>
+          <td>{{ u.lastActive }}</td>
+          <td>
+            <span class="badge" [ngClass]="u.status === 'Active' ? 'badge-active' : 'badge-inactive'">
+              {{ u.status }}
+            </span>
+          </td>
+          <td>
+            <div class="row-actions">
+              <button title="Toggle status" (click)="toggleUserStatus(u)">
+                <i [ngClass]="u.status === 'Active' ? 'ri-pause-circle-line' : 'ri-play-circle-line'"></i>
+              </button>
+              <button title="Remove admin"><i class="ri-delete-bin-line"></i></button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filteredUsers.length === 0">
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="ri-inbox-line"></i>
+              No admin users match your filters
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ---- EDIT PERMISSIONS MODAL ---- -->
+<div class="modal-overlay" *ngIf="showRoleModal" (click)="closeRoleModal()">
+  <div class="modal-box modal-wide" (click)="$event.stopPropagation()">
+    <div class="modal-hdr">
+      <div>
+        <h3 class="modal-title">{{ selectedRole?.name }}</h3>
+        <p class="modal-sub" style="margin:2px 0 0;">{{ selectedRole?.accessLevel }}</p>
+      </div>
+      <button class="modal-close" (click)="closeRoleModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <p class="role-modal-desc">{{ selectedRole?.description }}</p>
+
+    <h4 class="section-sub-title">Permissions</h4>
+    <div class="perm-list" *ngIf="selectedRole">
+      <label class="perm-row" *ngFor="let p of allPermissions">
+        <span>{{ p.label }}</span>
+        <input type="checkbox"
+          [checked]="selectedRole.permissions.includes(p.key)"
+          (change)="togglePermission(p.key)"
+          [disabled]="selectedRole.id === 'super-admin'" />
+      </label>
+    </div>
+    <p class="perm-note" *ngIf="selectedRole?.id === 'super-admin'">
+      <i class="ri-information-line"></i> Super Admin always has full access and cannot be restricted.
+    </p>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="closeRoleModal()">Cancel</button>
+      <button class="btn-green" (click)="saveRolePermissions()">
+        <i class="ri-check-line"></i> Save Permissions
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ---- INVITE ADMIN MODAL ---- -->
+<div class="modal-overlay" *ngIf="showInviteModal" (click)="closeInviteModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Invite Admin User</h3>
+      <button class="modal-close" (click)="closeInviteModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Email Address</label>
+      <input type="email" class="form-input" placeholder="name@voltgo.com" [(ngModel)]="inviteEmail" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Assign Role</label>
+      <select class="form-select" [(ngModel)]="inviteRoleId">
+        <option *ngFor="let r of roles" [value]="r.id">{{ r.name }}</option>
+      </select>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="closeInviteModal()">Cancel</button>
+      <button class="btn-green" (click)="sendInvite()" [disabled]="!inviteEmail.trim()">
+        <i class="ri-send-plane-fill"></i> Send Invite
+      </button>
+    </div>
+  </div>
+</div>
