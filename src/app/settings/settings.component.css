@@ -219,3 +219,41 @@
     margin-right: 0;
   }
 }
+
+/* ---------- LIVE SETTING ROWS (Bundle Rules tab) ---------- */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-info { flex: 1; min-width: 0; }
+.setting-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.setting-control .form-select { min-width: 180px; }
+.setting-save-btn {
+  padding: 9px 16px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.setting-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .setting-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .setting-control {
+    width: 100%;
+  }
+  .setting-control .form-select {
+    flex: 1;
+  }
+}

@@ -2,6 +2,9 @@
 
   <!-- ---- SETTINGS NAV ---- -->
   <div class="settings-nav">
+    <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'bundles'" (click)="setTab('bundles')">
+      <i class="ri-gift-line"></i> Bundle Rules
+    </button>
     <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'general'" (click)="setTab('general')">
       <i class="ri-building-line"></i> General
     </button>
@@ -11,10 +14,12 @@
     <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'ai'" (click)="setTab('ai')">
       <i class="ri-robot-2-line"></i> AI Settings
     </button>
-    <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'notifications'" (click)="setTab('notifications')">
+    <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'notifications'"
+      (click)="setTab('notifications')">
       <i class="ri-notification-3-line"></i> Notifications
     </button>
-    <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'security'" (click)="setTab('security')">
+    <button class="settings-nav-item" [class.settings-nav-active]="activeTab === 'security'"
+      (click)="setTab('security')">
       <i class="ri-shield-keyhole-line"></i> Security
     </button>
   </div>
@@ -22,11 +27,70 @@
   <!-- ---- SETTINGS CONTENT ---- -->
   <div class="settings-content">
 
+    <!-- BUNDLE RULES (real backend settings) -->
+    <div class="card" *ngIf="activeTab === 'bundles'">
+      <div class="card-hdr">
+        <h2 class="card-title">Bundle Rules</h2>
+      </div>
+
+      <div class="auth-alert auth-alert-error" *ngIf="settingsError()" style="margin-bottom:16px;">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ settingsError() }}</span>
+      </div>
+
+      <div class="empty-state" *ngIf="settingsLoading()">
+        <i class="ri-loader-4-line spin"></i> Loading settings...
+      </div>
+
+      <ng-container *ngIf="!settingsLoading()">
+        <div class="setting-row" *ngFor="let setting of liveSettings()">
+          <div class="setting-info">
+            <p class="toggle-label">{{ settingLabel(setting.key) }}</p>
+            <p class="toggle-sub">{{ setting.description }}</p>
+          </div>
+          <div class="setting-control">
+            <!-- Boolean setting (no allowed_values) -->
+            <ng-container *ngIf="!setting.allowed_values">
+              <label class="switch">
+                <input type="checkbox" [checked]="draftValues[setting.key] === 'true'"
+                  (change)="draftValues[setting.key] = $any($event.target).checked ? 'true' : 'false'" />
+                <span class="switch-slider"></span>
+              </label>
+              <button class="btn-green setting-save-btn"
+                [disabled]="draftValues[setting.key] === setting.value || savingKey() === setting.key"
+                (click)="saveLiveSetting(setting)">
+                <i class="ri-loader-4-line spin" *ngIf="savingKey() === setting.key"></i>
+                <span *ngIf="savingKey() !== setting.key">Save</span>
+              </button>
+            </ng-container>
+            <!-- Enum setting (has allowed_values) -->
+            <ng-container *ngIf="setting.allowed_values">
+              <select class="form-select" [(ngModel)]="draftValues[setting.key]">
+                <option *ngFor="let opt of setting.allowed_values" [value]="opt">{{ opt | titlecase }}</option>
+              </select>
+              <button class="btn-green setting-save-btn"
+                [disabled]="draftValues[setting.key] === setting.value || savingKey() === setting.key"
+                (click)="saveLiveSetting(setting)">
+                <i class="ri-loader-4-line spin" *ngIf="savingKey() === setting.key"></i>
+                <span *ngIf="savingKey() !== setting.key">Save</span>
+              </button>
+            </ng-container>
+          </div>
+        </div>
+
+        <div class="empty-state" *ngIf="liveSettings().length === 0">
+          <i class="ri-inbox-line"></i> No configurable settings returned by the server.
+        </div>
+      </ng-container>
+    </div>
+
     <!-- GENERAL -->
     <div class="card" *ngIf="activeTab === 'general'">
       <div class="card-hdr">
         <h2 class="card-title">Company Profile</h2>
       </div>
+
+      <app-mock-data-banner></app-mock-data-banner>
 
       <div class="form-row">
         <div class="form-group">
@@ -62,7 +126,8 @@
       </div>
 
       <h3 class="settings-subhdr">Operating Cities</h3>
-      <p class="settings-hint">Enable cities where VoltGo currently operates. Per the rollout plan, Accra launches first, expanding to Kumasi, Tema, and Takoradi.</p>
+      <p class="settings-hint">Enable cities where VoltGo currently operates. Per the rollout plan, Accra launches
+        first, expanding to Kumasi, Tema, and Takoradi.</p>
       <div class="city-grid">
         <label class="city-toggle" *ngFor="let city of cities">
           <span>{{ city }}</span>
@@ -76,6 +141,9 @@
       <div class="card-hdr">
         <h2 class="card-title">Base Pricing</h2>
       </div>
+
+      <app-mock-data-banner></app-mock-data-banner>
+
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Base Fare — Bicycle (GHS)</label>
@@ -98,7 +166,8 @@
       </div>
 
       <h3 class="settings-subhdr">Dynamic Surge Pricing</h3>
-      <p class="settings-hint">Surge activates automatically when the demand-to-supply ratio exceeds the threshold below, per zone.</p>
+      <p class="settings-hint">Surge activates automatically when the demand-to-supply ratio exceeds the threshold
+        below, per zone.</p>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Surge Trigger Threshold (demand:supply)</label>
@@ -116,7 +185,8 @@
 
       <div class="surge-preview">
         <i class="ri-flashlight-line"></i>
-        Surge will range between <strong>{{ pricing.surgeMin }}x</strong> and <strong>{{ pricing.surgeMax }}x</strong> when demand exceeds <strong>{{ pricing.surgeThreshold }}:1</strong> in a zone.
+        Surge will range between <strong>{{ pricing.surgeMin }}x</strong> and <strong>{{ pricing.surgeMax }}x</strong>
+        when demand exceeds <strong>{{ pricing.surgeThreshold }}:1</strong> in a zone.
       </div>
     </div>
 
@@ -125,6 +195,8 @@
       <div class="card-hdr">
         <h2 class="card-title">Route Optimization Engine</h2>
       </div>
+
+      <app-mock-data-banner></app-mock-data-banner>
 
       <div class="toggle-row">
         <div>
@@ -139,7 +211,8 @@
 
       <div class="form-group">
         <label class="form-label">Re-optimization Interval (seconds)</label>
-        <input type="number" class="form-input" [(ngModel)]="ai.reoptimizeIntervalSec" [disabled]="!ai.routeOptimizationEnabled" />
+        <input type="number" class="form-input" [(ngModel)]="ai.reoptimizeIntervalSec"
+          [disabled]="!ai.routeOptimizationEnabled" />
       </div>
 
       <div class="toggle-row">
@@ -156,11 +229,13 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Max Batch Orders — E-Motorcycle</label>
-          <input type="number" class="form-input" [(ngModel)]="ai.maxBatchOrdersMoto" [disabled]="!ai.batchingEnabled" />
+          <input type="number" class="form-input" [(ngModel)]="ai.maxBatchOrdersMoto"
+            [disabled]="!ai.batchingEnabled" />
         </div>
         <div class="form-group">
           <label class="form-label">Max Batch Orders — Bicycle</label>
-          <input type="number" class="form-input" [(ngModel)]="ai.maxBatchOrdersBike" [disabled]="!ai.batchingEnabled" />
+          <input type="number" class="form-input" [(ngModel)]="ai.maxBatchOrdersBike"
+            [disabled]="!ai.batchingEnabled" />
         </div>
       </div>
 
@@ -198,33 +273,63 @@
         <h2 class="card-title">Admin Notification Preferences</h2>
       </div>
 
+      <app-mock-data-banner></app-mock-data-banner>
+
       <div class="toggle-row">
-        <div><p class="toggle-label">New Order Alerts</p><p class="toggle-sub">Notify when a new order is placed</p></div>
-        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.orderAlerts" /><span class="switch-slider"></span></label>
+        <div>
+          <p class="toggle-label">New Order Alerts</p>
+          <p class="toggle-sub">Notify when a new order is placed</p>
+        </div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.orderAlerts" /><span
+            class="switch-slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><p class="toggle-label">Rider SOS Alerts</p><p class="toggle-sub">Immediate alert on rider emergency button press</p></div>
-        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.riderSOS" /><span class="switch-slider"></span></label>
+        <div>
+          <p class="toggle-label">Rider SOS Alerts</p>
+          <p class="toggle-sub">Immediate alert on rider emergency button press</p>
+        </div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.riderSOS" /><span
+            class="switch-slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><p class="toggle-label">New KYC Submissions</p><p class="toggle-sub">Notify when a rider submits documents for review</p></div>
-        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.kycSubmissions" /><span class="switch-slider"></span></label>
+        <div>
+          <p class="toggle-label">New KYC Submissions</p>
+          <p class="toggle-sub">Notify when a rider submits documents for review</p>
+        </div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.kycSubmissions" /><span
+            class="switch-slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><p class="toggle-label">Payment Failures</p><p class="toggle-sub">Notify on failed Mobile Money or card transactions</p></div>
-        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.paymentFailures" /><span class="switch-slider"></span></label>
+        <div>
+          <p class="toggle-label">Payment Failures</p>
+          <p class="toggle-sub">Notify on failed Mobile Money or card transactions</p>
+        </div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.paymentFailures" /><span
+            class="switch-slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><p class="toggle-label">SLA Breaches</p><p class="toggle-sub">Notify when an order exceeds promised ETA</p></div>
-        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.slaBreaches" /><span class="switch-slider"></span></label>
+        <div>
+          <p class="toggle-label">SLA Breaches</p>
+          <p class="toggle-sub">Notify when an order exceeds promised ETA</p>
+        </div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.slaBreaches" /><span
+            class="switch-slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><p class="toggle-label">Weekly Report Emails</p><p class="toggle-sub">Auto-send scheduled analytics reports</p></div>
-        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.weeklyReports" /><span class="switch-slider"></span></label>
+        <div>
+          <p class="toggle-label">Weekly Report Emails</p>
+          <p class="toggle-sub">Auto-send scheduled analytics reports</p>
+        </div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.weeklyReports" /><span
+            class="switch-slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><p class="toggle-label">Marketing Emails</p><p class="toggle-sub">Product updates and announcements</p></div>
-        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.marketingEmails" /><span class="switch-slider"></span></label>
+        <div>
+          <p class="toggle-label">Marketing Emails</p>
+          <p class="toggle-sub">Product updates and announcements</p>
+        </div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="notifications.marketingEmails" /><span
+            class="switch-slider"></span></label>
       </div>
     </div>
 
@@ -235,8 +340,25 @@
       </div>
 
       <div class="toggle-row">
-        <div><p class="toggle-label">Require Two-Factor Authentication</p><p class="toggle-sub">All admin users must enable 2FA to sign in</p></div>
-        <label class="switch"><input type="checkbox" [(ngModel)]="security.twoFactorRequired" /><span class="switch-slider"></span></label>
+        <div>
+          <p class="toggle-label">Change My Password</p>
+          <p class="toggle-sub">Update the password used to sign in to this admin account</p>
+        </div>
+        <button class="btn-outline" (click)="goToChangePassword()">
+          <i class="ri-lock-password-line"></i> Change Password
+        </button>
+      </div>
+
+      <app-mock-data-banner
+        message="The toggles and login history below are not yet backed by a live endpoint — preview data only."></app-mock-data-banner>
+
+      <div class="toggle-row">
+        <div>
+          <p class="toggle-label">Require Two-Factor Authentication</p>
+          <p class="toggle-sub">All admin users must enable 2FA to sign in</p>
+        </div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="security.twoFactorRequired" /><span
+            class="switch-slider"></span></label>
       </div>
 
       <div class="form-row">
@@ -251,8 +373,12 @@
       </div>
 
       <div class="toggle-row">
-        <div><p class="toggle-label">IP Restriction</p><p class="toggle-sub">Limit admin portal access to approved IP ranges</p></div>
-        <label class="switch"><input type="checkbox" [(ngModel)]="security.ipRestrictionEnabled" /><span class="switch-slider"></span></label>
+        <div>
+          <p class="toggle-label">IP Restriction</p>
+          <p class="toggle-sub">Limit admin portal access to approved IP ranges</p>
+        </div>
+        <label class="switch"><input type="checkbox" [(ngModel)]="security.ipRestrictionEnabled" /><span
+            class="switch-slider"></span></label>
       </div>
 
       <h3 class="settings-subhdr">Recent Login Activity</h3>
@@ -284,8 +410,8 @@
       </div>
     </div>
 
-    <!-- SAVE BAR -->
-    <div class="save-bar">
+    <!-- SAVE BAR (preview tabs only — the Bundle Rules tab saves inline per-row) -->
+    <div class="save-bar" *ngIf="activeTab !== 'bundles'">
       <span class="save-confirm" *ngIf="saved"><i class="ri-checkbox-circle-fill"></i> Settings saved</span>
       <button class="btn-outline">Discard Changes</button>
       <button class="btn-green" (click)="saveSettings()">

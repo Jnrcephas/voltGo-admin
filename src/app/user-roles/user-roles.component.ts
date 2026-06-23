@@ -1,194 +1,275 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TimeAgoPipe } from '../core/pipes/time-ago.pipe';
+import { RoleService } from '../core/services/role.service';
+import { AdminUserService } from '../core/services/admin-user.service';
+import { AuthStore } from '../core/state/auth.store';
+import { AdminUserListItem, Permission, Role } from '../core/models';
+import { ApiError } from '../core/interceptors/error.interceptor';
 
-interface Permission {
-  key: string;
-  label: string;
-}
+/** Stable color accents for role cards, cycled by index since the backend doesn't return a color field. */
+const ROLE_COLORS = ['#8b5cf6', '#3b82f6', '#22c55e', '#f97316', '#06b6d4', '#9ca3af', '#ec4899', '#eab308'];
 
-interface Role {
-  id: string;
-  name: string;
-  accessLevel: 'Full access' | 'High access' | 'Medium access' | 'Limited access' | 'Financial access' | 'Read-only';
-  description: string;
-  permissions: string[];
-  userCount: number;
-  color: string;
-}
-
-interface AdminUser {
-  id: string;
-  name: string;
-  avatar: string;
-  email: string;
-  roleId: string;
-  status: 'Active' | 'Suspended';
-  lastActive: string;
+function generateTempPassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$';
+  let out = '';
+  for (let i = 0; i < 12; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
 }
 
 @Component({
   selector: 'app-user-roles',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TimeAgoPipe],
   templateUrl: './user-roles.component.html',
-  styleUrls: ['./user-roles.component.css']
+  styleUrls: ['./user-roles.component.css'],
 })
-export class UserRolesComponent {
+export class UserRolesComponent implements OnInit {
+  private readonly roleService = inject(RoleService);
+  private readonly adminUserService = inject(AdminUserService);
+  readonly authStore = inject(AuthStore);
 
-  stats = [
-    { label: 'Total Admin Users', value: '18', change: '+2',  positive: true,  icon: 'ri-shield-user-fill',   color: 'blue'   },
-    { label: 'Active Roles',      value: '6',  change: '+0%', positive: true,  icon: 'ri-government-fill',    color: 'purple' },
-    { label: 'Super Admins',      value: '2',  change: '+0%', positive: true,  icon: 'ri-vip-crown-fill',     color: 'orange' },
-    { label: 'Suspended Users',   value: '1',  change: '+0',  positive: true,  icon: 'ri-forbid-line',        color: 'red'    },
-  ];
+  // ---- Server state ----
+  readonly roles = signal<Role[]>([]);
+  readonly permissions = signal<Permission[]>([]);
+  readonly adminUsers = signal<AdminUserListItem[]>([]);
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
 
-  allPermissions: Permission[] = [
-    { key: 'fleet',     label: 'Fleet & GPS Tracking' },
-    { key: 'riders',    label: 'Rider Management' },
-    { key: 'orders',    label: 'Order Management' },
-    { key: 'dashcam',   label: 'Dashcam Access' },
-    { key: 'dispatch',  label: 'Manual Dispatch' },
-    { key: 'customers', label: 'Customer Accounts' },
-    { key: 'refunds',   label: 'Refunds & Disputes' },
-    { key: 'finance',   label: 'Revenue & Payouts' },
-    { key: 'bundles',   label: 'Bundle Management' },
-    { key: 'reports',   label: 'Reports & Analytics' },
-    { key: 'config',    label: 'System Configuration' },
-    { key: 'ai',        label: 'AI Model Settings' },
-  ];
+  // ---- Role modal state ----
+  readonly selectedRole = signal<Role | null>(null);
+  readonly draftPermissionIds = signal<Set<string>>(new Set());
+  readonly showRoleModal = signal(false);
+  readonly showCreateRoleModal = signal(false);
+  readonly roleActionPending = signal(false);
+  readonly roleActionError = signal<string | null>(null);
 
-  roles: Role[] = [
-    {
-      id: 'super-admin', name: 'Super Admin', accessLevel: 'Full access',
-      description: 'All features, system config, financial reports, AI settings',
-      permissions: ['fleet','riders','orders','dashcam','dispatch','customers','refunds','finance','bundles','reports','config','ai'],
-      userCount: 2, color: '#8b5cf6'
-    },
-    {
-      id: 'ops-manager', name: 'Operations Manager', accessLevel: 'High access',
-      description: 'Fleet, riders, orders, dashcam, dispatch management',
-      permissions: ['fleet','riders','orders','dashcam','dispatch','reports'],
-      userCount: 4, color: '#3b82f6'
-    },
-    {
-      id: 'fleet-manager', name: 'Fleet Manager', accessLevel: 'Medium access',
-      description: 'Vehicle status, GPS tracking, maintenance scheduling',
-      permissions: ['fleet','reports'],
-      userCount: 3, color: '#22c55e'
-    },
-    {
-      id: 'cust-support', name: 'Customer Support', accessLevel: 'Limited access',
-      description: 'Customer accounts, delivery issues, refunds',
-      permissions: ['customers','refunds','orders'],
-      userCount: 5, color: '#f97316'
-    },
-    {
-      id: 'finance-admin', name: 'Finance Admin', accessLevel: 'Financial access',
-      description: 'Revenue, payouts, invoices, bundle management',
-      permissions: ['finance','bundles','reports'],
-      userCount: 2, color: '#06b6d4'
-    },
-    {
-      id: 'auditor', name: 'Auditor', accessLevel: 'Read-only',
-      description: 'Reports, logs, analytics — no write access',
-      permissions: ['reports'],
-      userCount: 2, color: '#9ca3af'
-    },
-  ];
+  newRole = { name: '', description: '' };
 
-  adminUsers: AdminUser[] = [
-    { id: 'AU-001', name: 'Cephas',          avatar: 'https://i.pravatar.cc/40?img=3',  email: 'cephas@voltgo.com',      roleId: 'super-admin',  status: 'Active',    lastActive: 'Just now' },
-    { id: 'AU-002', name: 'Akosua Frimpong', avatar: 'https://i.pravatar.cc/40?img=44', email: 'akosua@voltgo.com',      roleId: 'super-admin',  status: 'Active',    lastActive: '2h ago' },
-    { id: 'AU-003', name: 'Michael Asare',   avatar: 'https://i.pravatar.cc/40?img=51', email: 'masare@voltgo.com',      roleId: 'ops-manager',  status: 'Active',    lastActive: '14m ago' },
-    { id: 'AU-004', name: 'Gloria Owusu',    avatar: 'https://i.pravatar.cc/40?img=47', email: 'gowusu@voltgo.com',      roleId: 'ops-manager',  status: 'Active',    lastActive: '38m ago' },
-    { id: 'AU-005', name: 'Samuel Kufuor',   avatar: 'https://i.pravatar.cc/40?img=53', email: 'skufuor@voltgo.com',     roleId: 'fleet-manager', status: 'Active',   lastActive: '1h ago' },
-    { id: 'AU-006', name: 'Patience Addo',   avatar: 'https://i.pravatar.cc/40?img=48', email: 'paddo@voltgo.com',       roleId: 'cust-support',  status: 'Active',   lastActive: '5m ago' },
-    { id: 'AU-007', name: 'Joseph Mensah',   avatar: 'https://i.pravatar.cc/40?img=56', email: 'jmensah@voltgo.com',     roleId: 'finance-admin', status: 'Active',   lastActive: '3h ago' },
-    { id: 'AU-008', name: 'Abena Sarpong',   avatar: 'https://i.pravatar.cc/40?img=45', email: 'asarpong@voltgo.com',    roleId: 'auditor',       status: 'Suspended', lastActive: '6d ago' },
-  ];
+  // ---- Create admin user state ----
+  readonly showCreateUserModal = signal(false);
+  readonly userActionPending = signal(false);
+  readonly userActionError = signal<string | null>(null);
+  readonly createdUserCredentials = signal<{ email: string; password: string } | null>(null);
+
+  newAdminUser = { full_name: '', email: '', phone: '', role_id: '' };
 
   searchTerm = '';
   roleFilter = 'All';
 
-  selectedRole: Role | null = null;
-  showRoleModal = false;
-  showInviteModal = false;
+  ngOnInit(): void {
+    this.loadAll();
+  }
 
-  inviteEmail = '';
-  inviteRoleId = '';
+  loadAll(): void {
+    this.loading.set(true);
+    this.error.set(null);
 
-  get filteredUsers(): AdminUser[] {
-    return this.adminUsers.filter(u => {
-      const matchesSearch = u.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                             u.email.toLowerCase().includes(this.searchTerm.toLowerCase());
-      const matchesRole = this.roleFilter === 'All' || u.roleId === this.roleFilter;
+    this.roleService.listRoles(true).subscribe({
+      next: (roles) => this.roles.set(roles),
+      error: (err: unknown) => this.error.set(err instanceof ApiError ? err.message : 'Failed to load roles.'),
+    });
+
+    this.roleService.listPermissions().subscribe({
+      next: (permissions) => this.permissions.set(permissions),
+      error: () => {
+        /* Permission catalogue failing to load shouldn't block the rest of the page. */
+      },
+    });
+
+    this.adminUserService.list({ limit: 100 }).subscribe({
+      next: (data) => {
+        this.adminUsers.set(data.users);
+        this.loading.set(false);
+      },
+      error: (err: unknown) => {
+        this.loading.set(false);
+        this.error.set(err instanceof ApiError ? err.message : 'Failed to load admin users.');
+      },
+    });
+  }
+
+  roleColor(index: number): string {
+    return ROLE_COLORS[index % ROLE_COLORS.length];
+  }
+
+  roleById(roleId: string): Role | undefined {
+    return this.roles().find((r) => r.id === roleId);
+  }
+
+  get filteredUsers(): AdminUserListItem[] {
+    return this.adminUsers().filter((u) => {
+      const matchesSearch =
+        u.full_name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(this.searchTerm.toLowerCase());
+      const matchesRole = this.roleFilter === 'All' || u.role.id === this.roleFilter;
       return matchesSearch && matchesRole;
     });
   }
 
-  roleName(roleId: string): string {
-    return this.roles.find(r => r.id === roleId)?.name || roleId;
+  get totalAdminUsers(): number {
+    return this.adminUsers().length;
+  }
+  get activeRoleCount(): number {
+    return this.roles().filter((r) => r.is_active).length;
+  }
+  get suspendedUserCount(): number {
+    return this.adminUsers().filter((u) => !u.is_active).length;
   }
 
-  roleColor(roleId: string): string {
-    return this.roles.find(r => r.id === roleId)?.color || '#999';
+  // ---- Role permission editing ----
+  viewRole(role: Role): void {
+    this.selectedRole.set(role);
+    this.draftPermissionIds.set(new Set((role.permissions ?? []).map((p) => p.id)));
+    this.roleActionError.set(null);
+    this.showRoleModal.set(true);
   }
 
-  viewRole(role: Role) {
-    this.selectedRole = { ...role, permissions: [...role.permissions] };
-    this.showRoleModal = true;
+  closeRoleModal(): void {
+    this.showRoleModal.set(false);
+    this.selectedRole.set(null);
   }
 
-  closeRoleModal() {
-    this.showRoleModal = false;
-    this.selectedRole = null;
+  isPermissionChecked(permissionId: string): boolean {
+    return this.draftPermissionIds().has(permissionId);
   }
 
-  togglePermission(key: string) {
-    if (!this.selectedRole) return;
-    const idx = this.selectedRole.permissions.indexOf(key);
-    if (idx >= 0) {
-      this.selectedRole.permissions.splice(idx, 1);
-    } else {
-      this.selectedRole.permissions.push(key);
+  togglePermission(permissionId: string): void {
+    const next = new Set(this.draftPermissionIds());
+    if (next.has(permissionId)) next.delete(permissionId);
+    else next.add(permissionId);
+    this.draftPermissionIds.set(next);
+  }
+
+  get permissionGroups(): { group: string; items: Permission[] }[] {
+    const groups = new Map<string, Permission[]>();
+    for (const p of this.permissions()) {
+      const list = groups.get(p.group) ?? [];
+      list.push(p);
+      groups.set(p.group, list);
     }
+    return Array.from(groups.entries()).map(([group, items]) => ({ group, items }));
   }
 
-  saveRolePermissions() {
-    if (!this.selectedRole) return;
-    const original = this.roles.find(r => r.id === this.selectedRole!.id);
-    if (original) {
-      original.permissions = [...this.selectedRole.permissions];
-    }
-    this.closeRoleModal();
+  isSuperAdminRole(role: Role | null): boolean {
+    return (role?.name ?? '').toLowerCase() === 'super_admin';
   }
 
-  openInviteModal() {
-    this.inviteEmail = '';
-    this.inviteRoleId = this.roles[0].id;
-    this.showInviteModal = true;
-  }
+  saveRolePermissions(): void {
+    const role = this.selectedRole();
+    if (!role) return;
 
-  closeInviteModal() {
-    this.showInviteModal = false;
-  }
+    this.roleActionPending.set(true);
+    this.roleActionError.set(null);
 
-  sendInvite() {
-    if (!this.inviteEmail.trim() || !this.inviteRoleId) return;
-    this.adminUsers.unshift({
-      id: 'AU-' + (100 + this.adminUsers.length),
-      name: this.inviteEmail.split('@')[0],
-      avatar: 'https://i.pravatar.cc/40?img=' + (20 + this.adminUsers.length),
-      email: this.inviteEmail,
-      roleId: this.inviteRoleId,
-      status: 'Active',
-      lastActive: 'Invited just now'
+    this.roleService.setRolePermissions(role.id, { permission_ids: Array.from(this.draftPermissionIds()) }).subscribe({
+      next: (updated) => {
+        this.roleActionPending.set(false);
+        this.roles.set(this.roles().map((r) => (r.id === updated.id ? updated : r)));
+        this.closeRoleModal();
+      },
+      error: (err: unknown) => {
+        this.roleActionPending.set(false);
+        this.roleActionError.set(
+          err instanceof ApiError ? err.message : 'Could not save permissions. Please try again.',
+        );
+      },
     });
-    this.closeInviteModal();
   }
 
-  toggleUserStatus(u: AdminUser) {
-    u.status = u.status === 'Active' ? 'Suspended' : 'Active';
+  // ---- Create role ----
+  openCreateRoleModal(): void {
+    this.newRole = { name: '', description: '' };
+    this.draftPermissionIds.set(new Set());
+    this.roleActionError.set(null);
+    this.showCreateRoleModal.set(true);
+  }
+
+  closeCreateRoleModal(): void {
+    this.showCreateRoleModal.set(false);
+  }
+
+  createRole(): void {
+    if (!this.newRole.name.trim()) return;
+
+    this.roleActionPending.set(true);
+    this.roleActionError.set(null);
+
+    this.roleService
+      .createRole({
+        name: this.newRole.name.trim(),
+        description: this.newRole.description.trim(),
+        permission_ids: Array.from(this.draftPermissionIds()),
+      })
+      .subscribe({
+        next: () => {
+          this.roleActionPending.set(false);
+          this.closeCreateRoleModal();
+          this.loadAll();
+        },
+        error: (err: unknown) => {
+          this.roleActionPending.set(false);
+          this.roleActionError.set(
+            err instanceof ApiError ? err.message : 'Could not create role. Please try again.',
+          );
+        },
+      });
+  }
+
+  // ---- Create admin user ----
+  openCreateUserModal(): void {
+    this.newAdminUser = { full_name: '', email: '', phone: '', role_id: this.roles()[0]?.id ?? '' };
+    this.userActionError.set(null);
+    this.createdUserCredentials.set(null);
+    this.showCreateUserModal.set(true);
+  }
+
+  closeCreateUserModal(): void {
+    this.showCreateUserModal.set(false);
+    this.createdUserCredentials.set(null);
+  }
+
+  createAdminUser(): void {
+    const { full_name, email, phone, role_id } = this.newAdminUser;
+    if (!full_name.trim() || !email.trim() || !phone.trim() || !role_id) return;
+
+    const tempPassword = generateTempPassword();
+
+    this.userActionPending.set(true);
+    this.userActionError.set(null);
+
+    this.adminUserService
+      .create({
+        full_name: full_name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        password: tempPassword,
+        role_id,
+        reset_required: true,
+      })
+      .subscribe({
+        next: () => {
+          this.userActionPending.set(false);
+          this.createdUserCredentials.set({ email: email.trim(), password: tempPassword });
+          this.loadAll();
+        },
+        error: (err: unknown) => {
+          this.userActionPending.set(false);
+          this.userActionError.set(
+            err instanceof ApiError ? err.message : 'Could not create admin user. Please try again.',
+          );
+        },
+      });
+  }
+
+  toggleUserStatus(u: AdminUserListItem): void {
+    if (!u.is_active) return; // Backend only exposes deactivate, not reactivate, for admin users.
+    this.adminUserService.deactivate(u.id).subscribe({
+      next: () => this.adminUsers.set(this.adminUsers().map((x) => (x.id === u.id ? { ...x, is_active: false } : x))),
+      error: (err: unknown) => this.error.set(err instanceof ApiError ? err.message : 'Could not deactivate user.'),
+    });
   }
 }
+
+

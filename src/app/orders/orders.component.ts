@@ -1,95 +1,211 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
-interface OrderRow {
-  id: string;
-  customer: string;
-  rider: string | null;
-  riderAvatar?: string;
-  pickup: string;
-  dropoff: string;
-  zone: string;
-  status: 'Pending' | 'Assigned' | 'In Transit' | 'Completed' | 'Cancelled';
-  price: number;
-  vehicleType: 'Bicycle' | 'E-Motorcycle';
-  slaBreach: boolean;
-  createdAt: string;
-}
+import { GhsCurrencyPipe } from '../core/pipes/ghs-currency.pipe';
+import { OrderService } from '../core/services/order.service';
+import { RiderService } from '../core/services/rider.service';
+import { AdminOrder, AdminRider, OrderStatus, OrderVehicleType } from '../core/models';
+import { ApiError } from '../core/interceptors/error.interceptor';
 
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, GhsCurrencyPipe],
   templateUrl: './orders.component.html',
-  styleUrls: ['./orders.component.css']
+  styleUrls: ['./orders.component.css'],
 })
-export class OrdersComponent {
+export class OrdersComponent implements OnInit {
+  private readonly orderService = inject(OrderService);
+  private readonly riderService = inject(RiderService);
 
-  stats = [
-    { label: 'Active Orders',    value: '40',  change: '+12%', positive: true,  icon: 'ri-shopping-bag-fill',    color: 'orange' },
-    { label: 'Unassigned',       value: '6',   change: '-2%',  positive: true,  icon: 'ri-error-warning-fill',   color: 'red'    },
-    { label: 'SLA Breaches',     value: '3',   change: '+1%',  positive: false, icon: 'ri-alarm-warning-fill',   color: 'purple' },
-    { label: 'Completed Today',  value: '40',  change: '+9%',  positive: true,  icon: 'ri-checkbox-circle-fill', color: 'green'  },
-  ];
+  readonly orders = signal<AdminOrder[]>([]);
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly total = signal(0);
+  readonly page = signal(1);
+  readonly pages = signal(1);
+
+  readonly availableRiders = signal<AdminRider[]>([]);
 
   searchTerm = '';
-  statusFilter = 'All';
-  zoneFilter = 'All';
+  statusFilter: 'All' | OrderStatus = 'All';
+  vehicleTypeFilter: 'All' | OrderVehicleType = 'All';
 
-  selectedOrder: OrderRow | null = null;
-  showReassignModal = false;
-  reassignTarget = '';
+  readonly selectedOrder = signal<AdminOrder | null>(null);
+  readonly showReassignModal = signal(false);
+  readonly reassignTarget = signal('');
+  readonly showCancelModal = signal(false);
+  readonly cancelReason = signal('');
+  readonly actionPending = signal(false);
+  readonly actionError = signal<string | null>(null);
 
-  availableRiders = [
-    'Eddie Lobanovskiy', 'Alexey Stave', 'Anton Tkacheve', 'Kwesi Boateng', 'Yaw Darko'
-  ];
+  ngOnInit(): void {
+    this.load();
+  }
 
-  orders: OrderRow[] = [
-    { id: '#876364', customer: 'Camera Barnlu',  rider: null,                  pickup: 'Madina station',  dropoff: 'Madina station', zone: 'Madina',     status: 'Pending',   price: 25, vehicleType: 'Bicycle',      slaBreach: false, createdAt: '10:14 AM' },
-    { id: '#876368', customer: 'Benson Opoku',   rider: 'Alexey Stave',        riderAvatar: 'https://i.pravatar.cc/32?img=12', pickup: 'Lapaz Papaye', dropoff: 'Lapaz Papaye', zone: 'Lapaz', status: 'Cancelled', price: 30, vehicleType: 'E-Motorcycle', slaBreach: false, createdAt: '09:52 AM' },
-    { id: '#876412', customer: 'Argan Oliver',   rider: 'Anton Tkacheve',      riderAvatar: 'https://i.pravatar.cc/32?img=13', pickup: 'Kasoa Weija',  dropoff: 'Kasoa Weija',  zone: 'Kasoa', status: 'Completed', price: 45, vehicleType: 'E-Motorcycle', slaBreach: false, createdAt: '09:30 AM' },
-    { id: '#876621', customer: 'Parfumer Jacob', rider: 'Eddie Lobanovskiy',   riderAvatar: 'https://i.pravatar.cc/32?img=11', pickup: 'East Legon',   dropoff: 'East Legon',   zone: 'East Legon', status: 'Completed', price: 35, vehicleType: 'Bicycle', slaBreach: false, createdAt: '08:45 AM' },
-    { id: '#876702', customer: 'Linda Mensah',   rider: 'Eddie Lobanovskiy',   riderAvatar: 'https://i.pravatar.cc/32?img=11', pickup: 'Adenta',       dropoff: 'East Legon',   zone: 'Adenta', status: 'In Transit', price: 50, vehicleType: 'E-Motorcycle', slaBreach: true,  createdAt: '11:02 AM' },
-    { id: '#876705', customer: 'Kojo Asante',    rider: null,                  pickup: 'Madina station',  dropoff: 'Adenta',       zone: 'Madina', status: 'Pending', price: 28, vehicleType: 'Bicycle', slaBreach: true, createdAt: '11:10 AM' },
-    { id: '#876710', customer: 'Ama Serwaa',     rider: 'Anton Tkacheve',      riderAvatar: 'https://i.pravatar.cc/32?img=13', pickup: 'East Legon',   dropoff: 'Lapaz',        zone: 'East Legon', status: 'Assigned',  price: 32, vehicleType: 'E-Motorcycle', slaBreach: false, createdAt: '11:20 AM' },
-  ];
+  load(page = 1): void {
+    this.loading.set(true);
+    this.error.set(null);
 
-  get filteredOrders(): OrderRow[] {
-    return this.orders.filter(o => {
-      const matchesSearch = o.customer.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                             o.id.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                             (o.rider?.toLowerCase().includes(this.searchTerm.toLowerCase()) ?? false);
-      const matchesStatus = this.statusFilter === 'All' || o.status === this.statusFilter;
-      const matchesZone = this.zoneFilter === 'All' || o.zone === this.zoneFilter;
-      return matchesSearch && matchesStatus && matchesZone;
+    this.orderService
+      .list({
+        page,
+        limit: 20,
+        status: this.statusFilter === 'All' ? undefined : this.statusFilter,
+        vehicle_type: this.vehicleTypeFilter === 'All' ? undefined : this.vehicleTypeFilter,
+      })
+      .subscribe({
+        next: (data) => {
+          this.orders.set(data.orders);
+          this.total.set(data.total);
+          this.page.set(data.page);
+          this.pages.set(data.pages || 1);
+          this.loading.set(false);
+        },
+        error: (err: unknown) => {
+          this.loading.set(false);
+          this.error.set(err instanceof ApiError ? err.message : 'Failed to load orders.');
+        },
+      });
+  }
+
+  applyFilters(): void {
+    this.load(1);
+  }
+
+  get filteredOrders(): AdminOrder[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.orders();
+    return this.orders().filter(
+      (o) =>
+        o.customer.full_name.toLowerCase().includes(term) ||
+        o.id.toLowerCase().includes(term) ||
+        (o.rider?.full_name.toLowerCase().includes(term) ?? false),
+    );
+  }
+
+  get activeCount(): number {
+    return this.orders().filter((o) => !['delivered', 'cancelled', 'failed'].includes(o.status)).length;
+  }
+  get unassignedCount(): number {
+    return this.orders().filter((o) => ['pending', 'searching'].includes(o.status)).length;
+  }
+  get slaBreachCount(): number {
+    return this.orders().filter((o) => o.sla_breach).length;
+  }
+  get completedCount(): number {
+    return this.orders().filter((o) => o.status === 'delivered').length;
+  }
+
+  /** Maps the backend's lifecycle statuses onto the badge classes the design already styles. */
+  statusBadgeClass(status: OrderStatus): string {
+    switch (status) {
+      case 'delivered':
+        return 'badge-active';
+      case 'cancelled':
+      case 'failed':
+        return 'badge-cancelled';
+      case 'pending':
+      case 'searching':
+        return 'badge-warning';
+      default:
+        return 'badge-info';
+    }
+  }
+
+  statusLabel(status: OrderStatus): string {
+    const labels: Record<OrderStatus, string> = {
+      pending: 'Pending',
+      searching: 'Searching',
+      assigned: 'Assigned',
+      rider_arriving: 'Rider Arriving',
+      collected: 'Collected',
+      in_transit: 'In Transit',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
+      failed: 'Failed',
+    };
+    return labels[status] ?? status;
+  }
+
+  openReassign(order: AdminOrder): void {
+    this.selectedOrder.set(order);
+    this.reassignTarget.set(order.rider?.id ?? '');
+    this.actionError.set(null);
+    this.showReassignModal.set(true);
+
+    this.riderService.list({ limit: 50, is_active: true, active_status: 'online' }).subscribe({
+      next: (data) => this.availableRiders.set(data.riders),
+      error: () => this.availableRiders.set([]),
     });
   }
 
-  get zones(): string[] {
-    return Array.from(new Set(this.orders.map(o => o.zone)));
+  closeReassign(): void {
+    this.showReassignModal.set(false);
+    this.selectedOrder.set(null);
   }
 
-  openReassign(order: OrderRow) {
-    this.selectedOrder = order;
-    this.reassignTarget = order.rider || '';
-    this.showReassignModal = true;
+  confirmReassign(): void {
+    const order = this.selectedOrder();
+    const riderId = this.reassignTarget();
+    if (!order || !riderId) return;
+
+    this.actionPending.set(true);
+    this.actionError.set(null);
+
+    const isFirstAssign = ['pending', 'searching'].includes(order.status);
+    const call = isFirstAssign
+      ? this.orderService.assignRider(order.id, { rider_id: riderId })
+      : this.orderService.reassignRider(order.id, { rider_id: riderId });
+
+    call.subscribe({
+      next: (updated) => {
+        this.actionPending.set(false);
+        this.orders.set(this.orders().map((o) => (o.id === updated.id ? updated : o)));
+        this.closeReassign();
+      },
+      error: (err: unknown) => {
+        this.actionPending.set(false);
+        this.actionError.set(
+          err instanceof ApiError ? err.message : 'Could not assign rider. Please try again.',
+        );
+      },
+    });
   }
 
-  closeReassign() {
-    this.showReassignModal = false;
-    this.selectedOrder = null;
+  openCancelModal(order: AdminOrder): void {
+    this.selectedOrder.set(order);
+    this.cancelReason.set('');
+    this.actionError.set(null);
+    this.showCancelModal.set(true);
   }
 
-  confirmReassign() {
-    if (this.selectedOrder && this.reassignTarget) {
-      this.selectedOrder.rider = this.reassignTarget;
-      this.selectedOrder.status = 'Assigned';
-    }
-    this.closeReassign();
+  closeCancelModal(): void {
+    this.showCancelModal.set(false);
+    this.selectedOrder.set(null);
   }
 
-  cancelOrder(order: OrderRow) {
-    order.status = 'Cancelled';
+  confirmCancel(): void {
+    const order = this.selectedOrder();
+    const reason = this.cancelReason().trim();
+    if (!order || !reason) return;
+
+    this.actionPending.set(true);
+    this.orderService.cancel(order.id, { cancellation_reason: reason }).subscribe({
+      next: (updated) => {
+        this.actionPending.set(false);
+        this.orders.set(this.orders().map((o) => (o.id === updated.id ? updated : o)));
+        this.closeCancelModal();
+      },
+      error: (err: unknown) => {
+        this.actionPending.set(false);
+        this.actionError.set(err instanceof ApiError ? err.message : 'Could not cancel order. Please try again.');
+      },
+    });
+  }
+
+  goToPage(target: number): void {
+    if (target < 1 || target > this.pages()) return;
+    this.load(target);
   }
 }

@@ -1,64 +1,87 @@
 <!-- ---- KPI CARDS ---- -->
 <section class="stats-grid">
-  <div class="stat-card" *ngFor="let stat of stats">
-    <div class="stat-icon" [ngClass]="{
-      'icon-blue': stat.color === 'blue',
-      'icon-orange': stat.color === 'orange',
-      'icon-purple': stat.color === 'purple',
-      'icon-green': stat.color === 'green'
-    }">
-      <i [ngClass]="stat.icon"></i>
-    </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-green"><i class="ri-gift-fill"></i></div>
     <div>
-      <p class="stat-val">{{ stat.value }}</p>
-      <p class="stat-lbl">{{ stat.label }}</p>
+      <p class="stat-val">{{ bundles().length }}</p>
+      <p class="stat-lbl">Bundle Products</p>
     </div>
-    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
-      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
-      {{ stat.change }}
-    </span>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-blue"><i class="ri-checkbox-circle-fill"></i></div>
+    <div>
+      <p class="stat-val">{{ bundles().filter(b => b.is_active).length }}</p>
+      <p class="stat-lbl">Active</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-purple"><i class="ri-pause-circle-fill"></i></div>
+    <div>
+      <p class="stat-val">{{ bundles().filter(b => !b.is_active).length }}</p>
+      <p class="stat-lbl">Deprecated</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-orange"><i class="ri-discount-percent-line"></i></div>
+    <div>
+      <p class="stat-val">{{ avgDiscount() }}%</p>
+      <p class="stat-lbl">Avg. Discount</p>
+    </div>
   </div>
 </section>
 
 <!-- ---- BUNDLE TIER CARDS ---- -->
 <section class="bundle-section">
   <div class="section-hdr">
-    <h2 class="section-title">Bundle Tiers</h2>
+    <h2 class="section-title">Bundle Products</h2>
     <button class="btn-dark" (click)="openCreateModal()">
       <i class="ri-add-line"></i> Create Bundle
     </button>
   </div>
 
-  <div class="bundle-grid">
-    <div class="bundle-tile" *ngFor="let tier of bundleTiers">
+  <div class="auth-alert auth-alert-error" *ngIf="error()" style="margin-bottom:16px;">
+    <i class="ri-error-warning-line"></i>
+    <span>{{ error() }}</span>
+  </div>
+
+  <div class="empty-state" *ngIf="loading()">
+    <i class="ri-loader-4-line spin"></i> Loading bundle products...
+  </div>
+
+  <div class="bundle-grid" *ngIf="!loading()">
+    <div class="bundle-tile" *ngFor="let tier of bundles(); let i = index">
       <div class="bundle-tile-top">
-        <span class="bundle-dot" [style.background]="tier.color"></span>
-        <span class="badge" [ngClass]="tier.active ? 'badge-active' : 'badge-inactive'">
-          {{ tier.active ? 'Active' : 'Inactive' }}
+        <span class="bundle-dot" [style.background]="tierColor(i)"></span>
+        <span class="badge" [ngClass]="tier.is_active ? 'badge-active' : 'badge-inactive'">
+          {{ tier.is_active ? 'Active' : 'Inactive' }}
         </span>
       </div>
       <h3 class="bundle-name">{{ tier.name }}</h3>
-      <p class="bundle-price">GHS {{ tier.price | number }}</p>
-      <p class="bundle-credits">{{ tier.credits }} deliveries · {{ tier.validity }} days</p>
+      <p class="bundle-price">{{ tier.price_ghs | ghs }}</p>
+      <p class="bundle-credits">{{ tier.credits }} deliveries · {{ tier.validity_days }} days</p>
 
       <div class="bundle-meta">
-        <span><i class="ri-discount-percent-line"></i> {{ tier.savings }}% savings</span>
-        <span><i class="ri-group-line"></i> {{ tier.subscribers }} subs</span>
+        <span><i class="ri-discount-percent-line"></i> {{ tier.discount_percent }}% savings</span>
+        <span *ngIf="tier.subscriber_count !== undefined"><i class="ri-group-line"></i> {{ tier.subscriber_count }} subs</span>
       </div>
 
       <div class="bundle-actions">
-        <button class="btn-outline bundle-btn">
+        <button class="btn-outline bundle-btn" (click)="openEditModal(tier)">
           <i class="ri-edit-line"></i> Edit
         </button>
-        <button class="btn-icon-only" (click)="toggleBundleActive(tier)" [title]="tier.active ? 'Deactivate' : 'Activate'">
-          <i [ngClass]="tier.active ? 'ri-pause-circle-line' : 'ri-play-circle-line'"></i>
+        <button class="btn-icon-only" (click)="toggleBundleActive(tier)" [title]="tier.is_active ? 'Deprecate' : 'Restore'">
+          <i [ngClass]="tier.is_active ? 'ri-pause-circle-line' : 'ri-play-circle-line'"></i>
         </button>
       </div>
+    </div>
+
+    <div class="empty-state" *ngIf="bundles().length === 0">
+      <i class="ri-inbox-line"></i> No bundle products yet — create your first one.
     </div>
   </div>
 </section>
 
-<!-- ---- CUSTOMER SUBSCRIPTIONS TABLE ---- -->
+<!-- ---- CUSTOMER SUBSCRIPTIONS TABLE (preview data — no admin endpoint yet) ---- -->
 <section class="card table-card">
   <div class="card-hdr">
     <h2 class="card-title">Customer Subscriptions</h2>
@@ -81,6 +104,10 @@
         <option value="Expired">Expired</option>
       </select>
     </div>
+  </div>
+
+  <div style="padding: 0 20px;">
+    <app-mock-data-banner message="There is no admin endpoint yet for listing customer bundle subscriptions — this table shows sample data only."></app-mock-data-banner>
   </div>
 
   <div class="tbl-wrap">
@@ -128,8 +155,8 @@
           </td>
           <td>
             <div class="row-actions">
-              <button title="Apply credits"><i class="ri-add-circle-line"></i></button>
-              <button title="Extend expiry"><i class="ri-calendar-line"></i></button>
+              <button title="Apply credits" disabled><i class="ri-add-circle-line"></i></button>
+              <button title="Extend expiry" disabled><i class="ri-calendar-line"></i></button>
             </div>
           </td>
         </tr>
@@ -144,24 +171,19 @@
       </tbody>
     </table>
   </div>
-
-  <div class="pagination">
-    <span class="pagination-info">Showing {{ filteredSubscriptions.length }} results</span>
-    <div class="pagination-controls">
-      <button class="page-btn"><i class="ri-arrow-left-s-line"></i></button>
-      <button class="page-btn active">1</button>
-      <button class="page-btn">2</button>
-      <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
-    </div>
-  </div>
 </section>
 
-<!-- ---- CREATE BUNDLE MODAL ---- -->
-<div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
+<!-- ---- CREATE / EDIT BUNDLE MODAL ---- -->
+<div class="modal-overlay" *ngIf="showCreateModal()" (click)="closeCreateModal()">
   <div class="modal-box" (click)="$event.stopPropagation()">
     <div class="modal-hdr">
-      <h3 class="modal-title">Create Bundle Tier</h3>
+      <h3 class="modal-title">{{ editingId() ? 'Edit Bundle Product' : 'Create Bundle Product' }}</h3>
       <button class="modal-close" (click)="closeCreateModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="auth-alert auth-alert-error" *ngIf="actionError()" style="margin-bottom:14px;">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ actionError() }}</span>
     </div>
 
     <div class="form-group">
@@ -176,25 +198,25 @@
       </div>
       <div class="form-group">
         <label class="form-label">Price (GHS)</label>
-        <input type="number" class="form-input" [(ngModel)]="newBundle.price" />
+        <input type="number" class="form-input" [(ngModel)]="newBundle.price_ghs" />
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Validity (days)</label>
-        <input type="number" class="form-input" [(ngModel)]="newBundle.validity" />
+        <input type="number" class="form-input" [(ngModel)]="newBundle.validity_days" />
       </div>
       <div class="form-group">
-        <label class="form-label">Savings (%)</label>
-        <input type="number" class="form-input" [(ngModel)]="newBundle.savings" />
+        <label class="form-label">Discount (%)</label>
+        <input type="number" class="form-input" [(ngModel)]="newBundle.discount_percent" />
       </div>
     </div>
 
     <div class="modal-footer">
       <button class="btn-outline" (click)="closeCreateModal()">Cancel</button>
-      <button class="btn-green" (click)="saveBundle()">
-        <i class="ri-check-line"></i> Create Bundle
+      <button class="btn-green" [disabled]="!newBundle.name.trim() || actionPending()" (click)="saveBundle()">
+        <i class="ri-check-line"></i> {{ editingId() ? 'Save Changes' : 'Create Bundle' }}
       </button>
     </div>
   </div>

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MockDataBannerComponent } from '../shared/mock-data-banner.component';
 
 interface FeedSlot {
   vehicleId: string;
@@ -25,7 +26,7 @@ interface ArchiveClip {
 @Component({
   selector: 'app-dashcam',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MockDataBannerComponent],
   templateUrl: './dashcam.component.html',
   styleUrls: ['./dashcam.component.css']
 })
