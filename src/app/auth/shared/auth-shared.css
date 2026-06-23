@@ -14,17 +14,25 @@
 .auth-card {
   background: #fff;
   border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(20, 20, 50, 0.08);
+  /* box-shadow: 0 8px 32px rgba(20, 20, 50, 0.08); */
   padding: 40px 36px;
   width: 100%;
   max-width: 420px;
 }
+
 
 .auth-logo {
   font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.5px;
 }
+.auth-logo-img {
+  height: 80px;
+  width: auto;
+  display: block;
+  margin-bottom: 4px;
+}
+
 .logo-volt { color: #1a1a2e; }
 .logo-go { color: #22c55e; }
 
@@ -164,3 +172,5 @@
   }
   .auth-title { font-size: 19px; }
 }
+
+

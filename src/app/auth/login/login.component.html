@@ -1,7 +1,7 @@
 <div class="auth-shell">
   <div class="auth-card">
     <div class="auth-logo">
-      <span class="logo-volt">Volt</span><span class="logo-go">GO</span>
+      <img src="assets/images/icon.png" alt="VoltGO" class="auth-logo-img" />
     </div>
     <p class="auth-tag">Admin Portal</p>
 
@@ -21,30 +21,17 @@
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div class="form-group">
         <label class="form-label" for="email">Email Address</label>
-        <input
-          id="email"
-          type="email"
-          class="form-input"
-          [class.input-error]="emailInvalid"
-          placeholder="admin@voltgo.com"
-          formControlName="email"
-          autocomplete="username"
-        />
+        <input id="email" type="email" class="form-input" [class.input-error]="emailInvalid"
+          placeholder="admin@voltgo.com" formControlName="email" autocomplete="username" />
         <p class="field-error" *ngIf="emailInvalid">Enter a valid email address.</p>
       </div>
 
       <div class="form-group">
         <label class="form-label" for="password">Password</label>
         <div class="password-wrap">
-          <input
-            id="password"
-            [type]="showPassword() ? 'text' : 'password'"
-            class="form-input"
-            [class.input-error]="passwordInvalid"
-            placeholder="Enter your password"
-            formControlName="password"
-            autocomplete="current-password"
-          />
+          <input id="password" [type]="showPassword() ? 'text' : 'password'" class="form-input"
+            [class.input-error]="passwordInvalid" placeholder="Enter your password" formControlName="password"
+            autocomplete="current-password" />
           <button type="button" class="password-toggle" (click)="togglePasswordVisibility()" tabindex="-1">
             <i [ngClass]="showPassword() ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
           </button>

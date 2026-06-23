@@ -27,15 +27,35 @@ export class PaymentService {
     if (params.type) httpParams = httpParams.set('type', params.type);
 
     return this.http
-      .get<ApiSuccessEnvelope<AdminPaymentListData>>(`${this.baseUrl}${API_ENDPOINTS.adminPayments.list}`, {
-        params: httpParams,
-      })
-      .pipe(map((res) => res.data));
+      .get<any>(`${this.baseUrl}${API_ENDPOINTS.adminPayments.list}`, { params: httpParams })
+      .pipe(
+        map((res) => {
+          const d = res.data;
+          const rawItems = d.payments ?? d.items ?? [];
+          return {
+            total: d.total,
+            page: d.page,
+            pages: d.pages,
+            payments: rawItems.map((p: any) => ({
+              id: p.id,
+              reference: p.paystack_ref ?? p.reference ?? '—',
+              customer: p.customer,
+              type: p.type,
+              method: p.method ?? null,
+              amount: parseFloat(p.amount_ghs ?? p.amount ?? '0'),
+              status: p.status,
+              created_at: p.created_at,
+            })),
+          } as AdminPaymentListData;
+        }),
+      );
   }
 
   activate(payload: ActivatePaymentRequest): Observable<unknown> {
     return this.http
-      .post<ApiSuccessEnvelope<unknown>>(`${this.baseUrl}${API_ENDPOINTS.adminPayments.activate}`, payload)
+      .post<
+        ApiSuccessEnvelope<unknown>
+      >(`${this.baseUrl}${API_ENDPOINTS.adminPayments.activate}`, payload)
       .pipe(map((res) => res.data));
   }
 }

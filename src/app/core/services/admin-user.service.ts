@@ -29,38 +29,49 @@ export class AdminUserService {
     if (params.limit) httpParams = httpParams.set('limit', params.limit);
 
     return this.http
-      .get<ApiSuccessEnvelope<AdminUserListData>>(`${this.baseUrl}${API_ENDPOINTS.adminUsers.list}`, {
-        params: httpParams,
-      })
-      .pipe(map((res) => res.data));
+      .get<any>(`${this.baseUrl}${API_ENDPOINTS.adminUsers.list}`, { params: httpParams })
+      .pipe(
+        map((res) => {
+          const d = res.data;
+          return {
+            total: d.total,
+            page: d.page,
+            pages: d.pages,
+            users: d.users ?? d.items ?? [],
+          } as AdminUserListData;
+        }),
+      );
   }
 
   getById(id: string): Observable<AdminUserListItem> {
     return this.http
-      .get<ApiSuccessEnvelope<AdminUserListItem>>(`${this.baseUrl}${API_ENDPOINTS.adminUsers.detail(id)}`)
+      .get<
+        ApiSuccessEnvelope<AdminUserListItem>
+      >(`${this.baseUrl}${API_ENDPOINTS.adminUsers.detail(id)}`)
       .pipe(map((res) => res.data));
   }
 
   create(payload: CreateAdminUserRequest): Observable<AdminUserListItem> {
     return this.http
-      .post<ApiSuccessEnvelope<AdminUserListItem>>(
-        `${this.baseUrl}${API_ENDPOINTS.adminUsers.create}`,
-        payload,
-      )
+      .post<
+        ApiSuccessEnvelope<AdminUserListItem>
+      >(`${this.baseUrl}${API_ENDPOINTS.adminUsers.create}`, payload)
       .pipe(map((res) => res.data));
   }
 
   update(id: string, payload: UpdateAdminUserRequest): Observable<AdminUserListItem> {
     return this.http
-      .put<ApiSuccessEnvelope<AdminUserListItem>>(
-        `${this.baseUrl}${API_ENDPOINTS.adminUsers.update(id)}`,
-        payload,
-      )
+      .put<
+        ApiSuccessEnvelope<AdminUserListItem>
+      >(`${this.baseUrl}${API_ENDPOINTS.adminUsers.update(id)}`, payload)
       .pipe(map((res) => res.data));
   }
 
   deactivate(id: string): Observable<ApiSimpleSuccess> {
-    return this.http.post<ApiSimpleSuccess>(`${this.baseUrl}${API_ENDPOINTS.adminUsers.deactivate(id)}`, {});
+    return this.http.post<ApiSimpleSuccess>(
+      `${this.baseUrl}${API_ENDPOINTS.adminUsers.deactivate(id)}`,
+      {},
+    );
   }
 
   resetPassword(id: string, payload: ResetAdminUserPasswordRequest): Observable<ApiSimpleSuccess> {
