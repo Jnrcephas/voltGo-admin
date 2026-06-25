@@ -1,3 +1,4 @@
 {
-  "apiBaseUrl": "https://api.voltgoapp.com/api/v1"
+  "apiBaseUrl": "https://api.voltgoapp.com/api/v1",
+  "googleMapsApiKey": "AIzaSyDex_IKWvqGX2MQOXi7jUqy264s4z2E8xo"
 }

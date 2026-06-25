@@ -47,3 +47,5 @@ import { Component, Input } from '@angular/core';
 export class MockDataBannerComponent {
   @Input() message = 'This page is not yet wired to a live backend endpoint — figures shown are sample data.';
 }
+
+

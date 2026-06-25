@@ -1,4 +1,5 @@
-<app-mock-data-banner message="There is no live GPS/fleet-tracking feed endpoint yet — every position and speed value shown here is sample data."></app-mock-data-banner>
+<app-mock-data-banner
+  message="There is no live GPS/fleet-tracking feed endpoint yet — every position and speed value shown here is sample data."></app-mock-data-banner>
 
 <!-- ---- KPI CARDS ---- -->
 <section class="stats-grid">
@@ -29,33 +30,21 @@
   <div class="card map-card">
     <div class="card-hdr">
       <h2 class="card-title">Live Fleet Map</h2>
-      <button class="btn-dark">
+      <button class="btn-dark" (click)="toggleFullscreen()">
         <i class="ri-fullscreen-line"></i> Full map
       </button>
     </div>
     <div class="map-box">
-      <iframe
-        src="https://www.openstreetmap.org/export/embed.html?bbox=-0.2802%2C5.5300%2C-0.0800%2C5.7000&layer=mapnik"
-        title="Live Fleet Map"
-        loading="lazy">
-      </iframe>
-      <div class="mpin" *ngFor="let v of filteredVehicles" [style.top]="v.top" [style.left]="v.left"
-        (click)="selectVehicle(v)" [class.mpin-selected]="selectedVehicle?.id === v.id">
-        <div class="mpin-vehicle"
-          [ngClass]="{
-            'mpin-online': v.status === 'Online' && !v.flagged,
-            'mpin-idle': v.status === 'Idle',
-            'mpin-offline': v.status === 'Offline',
-            'mpin-flagged': v.flagged
-          }">
-          <i [ngClass]="v.vehicleType === 'Bicycle' ? 'ri-bike-line' : 'ri-e-bike-2-line'"></i>
-        </div>
-      </div>
+      <div #mapContainer class="gmap-container"></div>
     </div>
     <div class="map-legend">
       <span class="ldot ldot-green"></span>
       <span class="ltext">{{ onlineCount }} Online</span>
+      <span class="ldot ldot-amber"></span>
+      <span class="ltext">Idle</span>
       <span class="ldot ldot-red"></span>
+      <span class="ltext">Flagged</span>
+      <span class="ldot ldot-grey"></span>
       <span class="ltext">{{ offlineCount }} Offline</span>
     </div>
   </div>
@@ -181,8 +170,7 @@
           <td [style.color]="v.speed > 60 ? '#ef4444' : '#444'">{{ v.speed }} km/h</td>
           <td>{{ v.zone }}</td>
           <td>
-            <span class="badge"
-              [ngClass]="{
+            <span class="badge" [ngClass]="{
                 'badge-active': v.status === 'Online',
                 'badge-warning': v.status === 'Idle',
                 'badge-inactive': v.status === 'Offline'
@@ -190,8 +178,10 @@
           </td>
           <td>
             <div class="row-actions">
-              <button title="View on map" (click)="selectVehicle(v); $event.stopPropagation()"><i class="ri-map-pin-line"></i></button>
-              <button title="Route playback" (click)="openPlayback(v); $event.stopPropagation()"><i class="ri-history-line"></i></button>
+              <button title="View on map" (click)="selectVehicle(v); $event.stopPropagation()"><i
+                  class="ri-map-pin-line"></i></button>
+              <button title="Route playback" (click)="openPlayback(v); $event.stopPropagation()"><i
+                  class="ri-history-line"></i></button>
             </div>
           </td>
         </tr>

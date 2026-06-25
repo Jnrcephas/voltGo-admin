@@ -49,7 +49,7 @@ export interface AdminRiderListData {
   page: number;
   pages: number;
   riders: AdminRider[];
-  items?: AdminRider[]; 
+  items?: AdminRider[];
 }
 
 export interface AdminRiderListParams {
@@ -67,3 +67,5 @@ export interface RejectRiderRequest {
 export interface AssignVehicleRequest {
   vehicle_id: string;
 }
+
+

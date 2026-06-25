@@ -8,6 +8,7 @@ import { environment } from '../../../environments/environment';
  */
 export interface RuntimeConfig {
   apiBaseUrl: string;
+  googleMapsApiKey: string;
 }
 
 /**
@@ -24,10 +25,15 @@ export interface RuntimeConfig {
 export class AppConfigService {
   private config: RuntimeConfig = {
     apiBaseUrl: environment.apiBaseUrl,
+    googleMapsApiKey: '',
   };
 
   get apiBaseUrl(): string {
     return this.config.apiBaseUrl;
+  }
+
+  get googleMapsApiKey(): string {
+    return this.config?.googleMapsApiKey ?? '';
   }
 
   /** Called once at bootstrap by the app initializer in `app.config.ts`. */

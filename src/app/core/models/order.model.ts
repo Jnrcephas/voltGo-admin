@@ -64,3 +64,5 @@ export interface AssignRiderToOrderRequest {
 export interface CancelOrderRequest {
   cancellation_reason: string;
 }
+
+
