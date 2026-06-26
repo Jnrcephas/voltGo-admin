@@ -691,3 +691,29 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- LOADING SPINNER ---------- */
+.spin {
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- INLINE ALERTS (used for API error/info messages in pages) ---------- */
+.auth-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.auth-alert i { font-size: 15px; margin-top: 1px; flex-shrink: 0; }
+.auth-alert-error { background: #fef2f2; color: #b91c1c; }
+.auth-alert-info { background: #eff6ff; color: #1d4ed8; }
+.auth-alert-success { background: #f0fdf4; color: #15803d; }

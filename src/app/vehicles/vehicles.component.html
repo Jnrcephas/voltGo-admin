@@ -1,22 +1,32 @@
 <!-- ---- KPI CARDS ---- -->
 <section class="stats-grid">
-  <div class="stat-card" *ngFor="let stat of stats">
-    <div class="stat-icon" [ngClass]="{
-      'icon-blue': stat.color === 'blue',
-      'icon-orange': stat.color === 'orange',
-      'icon-purple': stat.color === 'purple',
-      'icon-green': stat.color === 'green'
-    }">
-      <i [ngClass]="stat.icon"></i>
-    </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-blue"><i class="ri-e-bike-2-line"></i></div>
     <div>
-      <p class="stat-val">{{ stat.value }}</p>
-      <p class="stat-lbl">{{ stat.label }}</p>
+      <p class="stat-val">{{ total() }}</p>
+      <p class="stat-lbl">Total Vehicles</p>
     </div>
-    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
-      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
-      {{ stat.change }}
-    </span>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-green"><i class="ri-checkbox-circle-fill"></i></div>
+    <div>
+      <p class="stat-val">{{ availableCount }}</p>
+      <p class="stat-lbl">Available (this page)</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-purple"><i class="ri-user-follow-line"></i></div>
+    <div>
+      <p class="stat-val">{{ assignedCount }}</p>
+      <p class="stat-lbl">In Use (this page)</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-orange"><i class="ri-tools-line"></i></div>
+    <div>
+      <p class="stat-val">{{ maintenanceCount }}</p>
+      <p class="stat-lbl">Maintenance (this page)</p>
+    </div>
   </div>
 </section>
 
@@ -29,22 +39,27 @@
         <i class="ri-search-line"></i>
         <input type="text" placeholder="Search ID, plate, rider..." [(ngModel)]="searchTerm" />
       </div>
-      <select class="filter-select" [(ngModel)]="typeFilter">
+      <select class="filter-select" [(ngModel)]="typeFilter" (change)="applyFilters()">
         <option value="All">All Types</option>
-        <option value="Bicycle">Bicycle</option>
-        <option value="E-Motorcycle">E-Motorcycle</option>
+        <option value="bicycle">Bicycle</option>
+        <option value="motorcycle">E-Motorcycle</option>
       </select>
-      <select class="filter-select" [(ngModel)]="statusFilter">
+      <select class="filter-select" [(ngModel)]="statusFilter" (change)="applyFilters()">
         <option value="All">All Status</option>
-        <option value="Available">Available</option>
-        <option value="Assigned">Assigned</option>
-        <option value="Maintenance">Maintenance</option>
-        <option value="Retired">Retired</option>
+        <option value="available">Available</option>
+        <option value="in_use">In Use</option>
+        <option value="maintenance">Maintenance</option>
+        <option value="inactive">Inactive</option>
       </select>
       <button class="btn-dark" (click)="openAddModal()">
         <i class="ri-add-line"></i> Add Vehicle
       </button>
     </div>
+  </div>
+
+  <div class="auth-alert auth-alert-error" *ngIf="error()" style="margin: 0 20px 16px;">
+    <i class="ri-error-warning-line"></i>
+    <span>{{ error() }}</span>
   </div>
 
   <div class="tbl-wrap">
@@ -63,112 +78,117 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let v of filteredVehicles">
-          <td class="td-track">{{ v.vehicleId }}</td>
-          <td>
-            <span class="vehicle-tag">
-              <i [ngClass]="v.type === 'Bicycle' ? 'ri-bike-line' : 'ri-e-bike-2-line'"></i>
-              {{ v.type }}
-            </span>
-          </td>
-          <td>{{ v.plateNo || '—' }}</td>
-          <td>{{ v.gpsTrackerId }}</td>
-          <td>{{ v.dashcamId || '—' }}</td>
-          <td [style.color]="v.battery < 25 ? '#ef4444' : '#444'" style="font-weight:600;">{{ v.battery }}%</td>
-          <td>
-            <div class="cust-left" *ngIf="v.assignedRider; else noRider">
-              <img [src]="v.assignedRiderAvatar" [alt]="v.assignedRider" class="avatar-sm" />
-              <span style="font-weight:500;">{{ v.assignedRider }}</span>
-            </div>
-            <ng-template #noRider>
-              <span class="unassigned-tag">Unassigned</span>
-            </ng-template>
-          </td>
-          <td>
-            <span class="badge"
-              [ngClass]="{
-                'badge-active': v.status === 'Available',
-                'badge-info': v.status === 'Assigned',
-                'badge-warning': v.status === 'Maintenance',
-                'badge-inactive': v.status === 'Retired'
-              }">{{ v.status }}</span>
-          </td>
-          <td>
-            <div class="row-actions">
-              <button title="Assign to rider" *ngIf="!v.assignedRider && v.status !== 'Retired'" (click)="openAssignModal(v)">
-                <i class="ri-user-add-line"></i>
-              </button>
-              <button title="Unassign" *ngIf="v.assignedRider" (click)="unassign(v)">
-                <i class="ri-user-unfollow-line"></i>
-              </button>
-              <button title="Toggle maintenance" *ngIf="v.status !== 'Retired'" (click)="setMaintenance(v)">
-                <i class="ri-tools-line"></i>
-              </button>
-            </div>
-          </td>
+        <tr *ngIf="loading()">
+          <td colspan="9"><div class="empty-state"><i class="ri-loader-4-line spin"></i> Loading vehicles...</div></td>
         </tr>
-        <tr *ngIf="filteredVehicles.length === 0">
-          <td colspan="9">
-            <div class="empty-state">
-              <i class="ri-inbox-line"></i>
-              No vehicles match your filters
-            </div>
-          </td>
-        </tr>
+        <ng-container *ngIf="!loading()">
+          <tr *ngFor="let v of filteredVehicles">
+            <td class="td-track">{{ v.id }}</td>
+            <td>
+              <span class="vehicle-tag">
+                <i [ngClass]="v.type === 'bicycle' ? 'ri-bike-line' : 'ri-e-bike-2-line'"></i>
+                {{ v.type === 'bicycle' ? 'Bicycle' : 'E-Motorcycle' }}
+              </span>
+            </td>
+            <td>{{ v.plate_no || '—' }}</td>
+            <td>{{ v.gps_tracker_id }}</td>
+            <td>{{ v.dashcam_id || '—' }}</td>
+            <td [style.color]="v.battery_percent < 25 ? '#ef4444' : '#444'" style="font-weight:600;">{{ v.battery_percent }}%</td>
+            <td>
+              <div class="cust-left" *ngIf="v.assigned_rider; else noRider">
+                <img [src]="v.assigned_rider.avatar_url || 'https://i.pravatar.cc/32?u=' + v.assigned_rider.id" [alt]="v.assigned_rider.full_name" class="avatar-sm" />
+                <span style="font-weight:500;">{{ v.assigned_rider.full_name }}</span>
+              </div>
+              <ng-template #noRider>
+                <span class="unassigned-tag">Unassigned</span>
+              </ng-template>
+            </td>
+            <td>
+              <span class="badge"
+                [ngClass]="{
+                  'badge-active': v.status === 'available',
+                  'badge-info': v.status === 'in_use',
+                  'badge-warning': v.status === 'maintenance',
+                  'badge-inactive': v.status === 'inactive'
+                }">{{ v.status === 'in_use' ? 'In Use' : (v.status | titlecase) }}</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button title="Assign to rider" *ngIf="!v.assigned_rider && v.status !== 'inactive'" (click)="openAssignModal(v)">
+                  <i class="ri-user-add-line"></i>
+                </button>
+                <button title="Unassign" *ngIf="v.assigned_rider" (click)="unassign(v)">
+                  <i class="ri-user-unfollow-line"></i>
+                </button>
+                <button title="Toggle maintenance" *ngIf="v.status !== 'inactive'" (click)="setMaintenance(v)">
+                  <i class="ri-tools-line"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredVehicles.length === 0">
+            <td colspan="9">
+              <div class="empty-state">
+                <i class="ri-inbox-line"></i>
+                No vehicles match your filters
+              </div>
+            </td>
+          </tr>
+        </ng-container>
       </tbody>
     </table>
   </div>
 
   <div class="pagination">
-    <span class="pagination-info">Showing {{ filteredVehicles.length }} of {{ vehicles.length }} vehicles</span>
+    <span class="pagination-info">Showing page {{ page() }} of {{ pages() }} · {{ total() }} vehicles total</span>
     <div class="pagination-controls">
-      <button class="page-btn"><i class="ri-arrow-left-s-line"></i></button>
-      <button class="page-btn active">1</button>
-      <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+      <button class="page-btn" [disabled]="page() <= 1" (click)="goToPage(page() - 1)"><i class="ri-arrow-left-s-line"></i></button>
+      <button class="page-btn active">{{ page() }}</button>
+      <button class="page-btn" [disabled]="page() >= pages()" (click)="goToPage(page() + 1)"><i class="ri-arrow-right-s-line"></i></button>
     </div>
   </div>
 </section>
 
 <!-- ---- ADD VEHICLE MODAL ---- -->
-<div class="modal-overlay" *ngIf="showAddModal" (click)="closeAddModal()">
+<div class="modal-overlay" *ngIf="showAddModal()" (click)="closeAddModal()">
   <div class="modal-box" (click)="$event.stopPropagation()">
     <div class="modal-hdr">
       <h3 class="modal-title">Add New Vehicle</h3>
       <button class="modal-close" (click)="closeAddModal()"><i class="ri-close-line"></i></button>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">Vehicle ID Code</label>
-      <input type="text" class="form-input" placeholder="e.g. VH-2210" [(ngModel)]="newVehicle.vehicleId" />
+    <div class="auth-alert auth-alert-error" *ngIf="actionError()" style="margin-bottom:14px;">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ actionError() }}</span>
     </div>
 
     <div class="form-group">
       <label class="form-label">Vehicle Type</label>
       <select class="form-select" [(ngModel)]="newVehicle.type">
-        <option value="Bicycle">Bicycle</option>
-        <option value="E-Motorcycle">E-Motorcycle</option>
+        <option value="bicycle">Bicycle</option>
+        <option value="motorcycle">E-Motorcycle</option>
       </select>
     </div>
 
-    <div class="form-group" *ngIf="newVehicle.type === 'E-Motorcycle'">
+    <div class="form-group" *ngIf="newVehicle.type === 'motorcycle'">
       <label class="form-label">Plate Number</label>
-      <input type="text" class="form-input" placeholder="e.g. GR-4427-23" [(ngModel)]="newVehicle.plateNo" />
+      <input type="text" class="form-input" placeholder="e.g. GR-4427-23" [(ngModel)]="newVehicle.plate_no" />
     </div>
 
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">GPS Tracker ID</label>
-        <input type="text" class="form-input" placeholder="e.g. GPS-8810" [(ngModel)]="newVehicle.gpsTrackerId" />
+        <input type="text" class="form-input" placeholder="e.g. GPS-8810" [(ngModel)]="newVehicle.gps_tracker_id" />
       </div>
       <div class="form-group">
         <label class="form-label">Dashcam ID (optional)</label>
-        <input type="text" class="form-input" placeholder="e.g. DC-5507" [(ngModel)]="newVehicle.dashcamId" />
+        <input type="text" class="form-input" placeholder="e.g. DC-5507" [(ngModel)]="newVehicle.dashcam_id" />
       </div>
     </div>
 
     <div class="modal-footer">
       <button class="btn-outline" (click)="closeAddModal()">Cancel</button>
-      <button class="btn-green" (click)="saveVehicle()">
+      <button class="btn-green" [disabled]="!newVehicle.gps_tracker_id.trim() || actionPending()" (click)="saveVehicle()">
         <i class="ri-check-line"></i> Add to Inventory
       </button>
     </div>
@@ -176,26 +196,34 @@
 </div>
 
 <!-- ---- ASSIGN RIDER MODAL ---- -->
-<div class="modal-overlay" *ngIf="showAssignModal" (click)="closeAssignModal()">
+<div class="modal-overlay" *ngIf="showAssignModal()" (click)="closeAssignModal()">
   <div class="modal-box" (click)="$event.stopPropagation()">
     <div class="modal-hdr">
       <h3 class="modal-title">Assign Vehicle</h3>
       <button class="modal-close" (click)="closeAssignModal()"><i class="ri-close-line"></i></button>
     </div>
 
-    <p class="modal-sub">{{ assignTarget?.vehicleId }} · {{ assignTarget?.type }}</p>
+    <p class="modal-sub" *ngIf="assignTarget() as t">{{ t.id }} · {{ t.type === 'bicycle' ? 'Bicycle' : 'E-Motorcycle' }}</p>
+
+    <div class="auth-alert auth-alert-error" *ngIf="actionError()" style="margin-bottom:14px;">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ actionError() }}</span>
+    </div>
 
     <div class="form-group">
       <label class="form-label">Select Rider</label>
-      <select class="form-select" [(ngModel)]="selectedRiderToAssign">
+      <select class="form-select" [ngModel]="selectedRiderToAssign()" (ngModelChange)="selectedRiderToAssign.set($event)">
         <option value="" disabled>Choose an unassigned rider</option>
-        <option *ngFor="let r of unassignedRiders" [value]="r">{{ r }}</option>
+        <option *ngFor="let r of unassignedRiders()" [value]="r.id">{{ r.full_name }}</option>
       </select>
+      <p class="field-error" *ngIf="unassignedRiders().length === 0" style="margin-top:8px;">
+        No approved, unassigned riders found.
+      </p>
     </div>
 
     <div class="modal-footer">
       <button class="btn-outline" (click)="closeAssignModal()">Cancel</button>
-      <button class="btn-green" (click)="confirmAssign()" [disabled]="!selectedRiderToAssign">
+      <button class="btn-green" (click)="confirmAssign()" [disabled]="!selectedRiderToAssign() || actionPending()">
         <i class="ri-check-line"></i> Confirm Assignment
       </button>
     </div>

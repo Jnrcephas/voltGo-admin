@@ -1,41 +1,63 @@
 <!-- ---- KPI CARDS ---- -->
 <section class="stats-grid">
-  <div class="stat-card" *ngFor="let stat of stats">
-    <div class="stat-icon" [ngClass]="{
-      'icon-blue': stat.color === 'blue',
-      'icon-orange': stat.color === 'orange',
-      'icon-purple': stat.color === 'purple',
-      'icon-red': stat.color === 'red'
-    }">
-      <i [ngClass]="stat.icon"></i>
-    </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-blue"><i class="ri-shield-user-fill"></i></div>
     <div>
-      <p class="stat-val">{{ stat.value }}</p>
-      <p class="stat-lbl">{{ stat.label }}</p>
+      <p class="stat-val">{{ totalAdminUsers }}</p>
+      <p class="stat-lbl">Total Admin Users</p>
     </div>
-    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
-      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
-      {{ stat.change }}
-    </span>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-purple"><i class="ri-government-fill"></i></div>
+    <div>
+      <p class="stat-val">{{ activeRoleCount }}</p>
+      <p class="stat-lbl">Active Roles</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-orange"><i class="ri-vip-crown-fill"></i></div>
+    <div>
+      <p class="stat-val">{{ roles().length }}</p>
+      <p class="stat-lbl">Total Roles</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-red"><i class="ri-forbid-line"></i></div>
+    <div>
+      <p class="stat-val">{{ suspendedUserCount }}</p>
+      <p class="stat-lbl">Inactive Users</p>
+    </div>
   </div>
 </section>
+
+<div class="auth-alert auth-alert-error" *ngIf="error()" style="margin-bottom:18px;">
+  <i class="ri-error-warning-line"></i>
+  <span>{{ error() }}</span>
+</div>
 
 <!-- ---- ROLE CARDS ---- -->
 <section class="role-section">
   <div class="section-hdr">
     <h2 class="section-title">Roles & Permissions</h2>
+    <button class="btn-dark" (click)="openCreateRoleModal()">
+      <i class="ri-add-line"></i> Create Role
+    </button>
   </div>
 
-  <div class="role-grid">
-    <div class="role-tile" *ngFor="let role of roles" (click)="viewRole(role)">
+  <div class="empty-state" *ngIf="loading()">
+    <i class="ri-loader-4-line spin"></i> Loading roles...
+  </div>
+
+  <div class="role-grid" *ngIf="!loading()">
+    <div class="role-tile" *ngFor="let role of roles(); let i = index" (click)="viewRole(role)">
       <div class="role-tile-top">
-        <span class="role-dot" [style.background]="role.color"></span>
-        <span class="role-access-tag">{{ role.accessLevel }}</span>
+        <span class="role-dot" [style.background]="roleColor(i)"></span>
+        <span class="role-access-tag">{{ role.is_system ? 'System role' : 'Custom role' }}</span>
       </div>
       <h3 class="role-name">{{ role.name }}</h3>
-      <p class="role-desc">{{ role.description }}</p>
+      <p class="role-desc">{{ role.description || 'No description provided.' }}</p>
       <div class="role-footer">
-        <span><i class="ri-group-line"></i> {{ role.userCount }} users</span>
+        <span><i class="ri-key-2-line"></i> {{ (role.permissions ?? []).length }} permissions</span>
         <span class="role-edit-link"><i class="ri-edit-line"></i> Edit Permissions</span>
       </div>
     </div>
@@ -53,10 +75,10 @@
       </div>
       <select class="filter-select" [(ngModel)]="roleFilter">
         <option value="All">All Roles</option>
-        <option *ngFor="let r of roles" [value]="r.id">{{ r.name }}</option>
+        <option *ngFor="let r of roles()" [value]="r.id">{{ r.name }}</option>
       </select>
-      <button class="btn-dark" (click)="openInviteModal()">
-        <i class="ri-user-add-line"></i> Invite Admin
+      <button class="btn-dark" (click)="openCreateUserModal()">
+        <i class="ri-user-add-line"></i> Create Admin
       </button>
     </div>
   </div>
@@ -77,32 +99,31 @@
         <tr *ngFor="let u of filteredUsers">
           <td>
             <div class="cust-left">
-              <img [src]="u.avatar" [alt]="u.name" class="avatar-sm" />
-              <span class="cell-name">{{ u.name }}</span>
+              <img [src]="'https://i.pravatar.cc/40?u=' + u.id" [alt]="u.full_name" class="avatar-sm" />
+              <span class="cell-name">{{ u.full_name }}</span>
             </div>
           </td>
           <td>{{ u.email }}</td>
           <td>
-            <span class="role-pill" [style.background]="roleColor(u.roleId) + '1A'" [style.color]="roleColor(u.roleId)">
-              {{ roleName(u.roleId) }}
+            <span class="role-pill" [style.background]="roleColor(roles().findIndex(r => r.id === u.role.id)) + '1A'" [style.color]="roleColor(roles().findIndex(r => r.id === u.role.id))">
+              {{ u.role.name }}
             </span>
           </td>
-          <td>{{ u.lastActive }}</td>
+          <td>{{ u.last_login_at | timeAgo }}</td>
           <td>
-            <span class="badge" [ngClass]="u.status === 'Active' ? 'badge-active' : 'badge-inactive'">
-              {{ u.status }}
+            <span class="badge" [ngClass]="u.is_active ? 'badge-active' : 'badge-inactive'">
+              {{ u.is_active ? 'Active' : 'Deactivated' }}
             </span>
           </td>
           <td>
             <div class="row-actions">
-              <button title="Toggle status" (click)="toggleUserStatus(u)">
-                <i [ngClass]="u.status === 'Active' ? 'ri-pause-circle-line' : 'ri-play-circle-line'"></i>
+              <button title="Deactivate" *ngIf="u.is_active" (click)="toggleUserStatus(u)">
+                <i class="ri-pause-circle-line"></i>
               </button>
-              <button title="Remove admin"><i class="ri-delete-bin-line"></i></button>
             </div>
           </td>
         </tr>
-        <tr *ngIf="filteredUsers.length === 0">
+        <tr *ngIf="filteredUsers.length === 0 && !loading()">
           <td colspan="6">
             <div class="empty-state">
               <i class="ri-inbox-line"></i>
@@ -116,66 +137,165 @@
 </section>
 
 <!-- ---- EDIT PERMISSIONS MODAL ---- -->
-<div class="modal-overlay" *ngIf="showRoleModal" (click)="closeRoleModal()">
+<div class="modal-overlay" *ngIf="showRoleModal()" (click)="closeRoleModal()">
   <div class="modal-box modal-wide" (click)="$event.stopPropagation()">
     <div class="modal-hdr">
       <div>
-        <h3 class="modal-title">{{ selectedRole?.name }}</h3>
-        <p class="modal-sub" style="margin:2px 0 0;">{{ selectedRole?.accessLevel }}</p>
+        <h3 class="modal-title">{{ selectedRole()?.name }}</h3>
+        <p class="modal-sub" style="margin:2px 0 0;">{{ selectedRole()?.is_system ? 'System role' : 'Custom role' }}</p>
       </div>
       <button class="modal-close" (click)="closeRoleModal()"><i class="ri-close-line"></i></button>
     </div>
 
-    <p class="role-modal-desc">{{ selectedRole?.description }}</p>
+    <p class="role-modal-desc">{{ selectedRole()?.description }}</p>
+
+    <div class="auth-alert auth-alert-error" *ngIf="roleActionError()" style="margin-bottom:14px;">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ roleActionError() }}</span>
+    </div>
 
     <h4 class="section-sub-title">Permissions</h4>
-    <div class="perm-list" *ngIf="selectedRole">
-      <label class="perm-row" *ngFor="let p of allPermissions">
-        <span>{{ p.label }}</span>
-        <input type="checkbox"
-          [checked]="selectedRole.permissions.includes(p.key)"
-          (change)="togglePermission(p.key)"
-          [disabled]="selectedRole.id === 'super-admin'" />
-      </label>
+    <div class="perm-group" *ngFor="let group of permissionGroups">
+      <p class="perm-group-title">{{ group.group | titlecase }}</p>
+      <div class="perm-list">
+        <label class="perm-row" *ngFor="let p of group.items">
+          <span>{{ p.description || p.name }}</span>
+          <input type="checkbox"
+            [checked]="isPermissionChecked(p.id)"
+            (change)="togglePermission(p.id)"
+            [disabled]="isSuperAdminRole(selectedRole())" />
+        </label>
+      </div>
     </div>
-    <p class="perm-note" *ngIf="selectedRole?.id === 'super-admin'">
+    <p class="perm-note" *ngIf="isSuperAdminRole(selectedRole())">
       <i class="ri-information-line"></i> Super Admin always has full access and cannot be restricted.
     </p>
 
     <div class="modal-footer">
       <button class="btn-outline" (click)="closeRoleModal()">Cancel</button>
-      <button class="btn-green" (click)="saveRolePermissions()">
+      <button class="btn-green" [disabled]="isSuperAdminRole(selectedRole()) || roleActionPending()" (click)="saveRolePermissions()">
         <i class="ri-check-line"></i> Save Permissions
       </button>
     </div>
   </div>
 </div>
 
-<!-- ---- INVITE ADMIN MODAL ---- -->
-<div class="modal-overlay" *ngIf="showInviteModal" (click)="closeInviteModal()">
-  <div class="modal-box" (click)="$event.stopPropagation()">
+<!-- ---- CREATE ROLE MODAL ---- -->
+<div class="modal-overlay" *ngIf="showCreateRoleModal()" (click)="closeCreateRoleModal()">
+  <div class="modal-box modal-wide" (click)="$event.stopPropagation()">
     <div class="modal-hdr">
-      <h3 class="modal-title">Invite Admin User</h3>
-      <button class="modal-close" (click)="closeInviteModal()"><i class="ri-close-line"></i></button>
+      <h3 class="modal-title">Create New Role</h3>
+      <button class="modal-close" (click)="closeCreateRoleModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="auth-alert auth-alert-error" *ngIf="roleActionError()" style="margin-bottom:14px;">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ roleActionError() }}</span>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Email Address</label>
-      <input type="email" class="form-input" placeholder="name@voltgo.com" [(ngModel)]="inviteEmail" />
+      <label class="form-label">Role Name</label>
+      <input type="text" class="form-input" placeholder="e.g. operations_manager" [(ngModel)]="newRole.name" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input type="text" class="form-input" placeholder="What this role can do" [(ngModel)]="newRole.description" />
     </div>
 
-    <div class="form-group">
-      <label class="form-label">Assign Role</label>
-      <select class="form-select" [(ngModel)]="inviteRoleId">
-        <option *ngFor="let r of roles" [value]="r.id">{{ r.name }}</option>
-      </select>
+    <h4 class="section-sub-title">Permissions</h4>
+    <div class="perm-group" *ngFor="let group of permissionGroups">
+      <p class="perm-group-title">{{ group.group | titlecase }}</p>
+      <div class="perm-list">
+        <label class="perm-row" *ngFor="let p of group.items">
+          <span>{{ p.description || p.name }}</span>
+          <input type="checkbox" [checked]="isPermissionChecked(p.id)" (change)="togglePermission(p.id)" />
+        </label>
+      </div>
     </div>
 
     <div class="modal-footer">
-      <button class="btn-outline" (click)="closeInviteModal()">Cancel</button>
-      <button class="btn-green" (click)="sendInvite()" [disabled]="!inviteEmail.trim()">
-        <i class="ri-send-plane-fill"></i> Send Invite
+      <button class="btn-outline" (click)="closeCreateRoleModal()">Cancel</button>
+      <button class="btn-green" [disabled]="!newRole.name.trim() || roleActionPending()" (click)="createRole()">
+        <i class="ri-check-line"></i> Create Role
       </button>
     </div>
   </div>
 </div>
+
+<!-- ---- CREATE ADMIN USER MODAL ---- -->
+<div class="modal-overlay" *ngIf="showCreateUserModal()" (click)="closeCreateUserModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Create Admin User</h3>
+      <button class="modal-close" (click)="closeCreateUserModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <ng-container *ngIf="!createdUserCredentials()">
+      <div class="auth-alert auth-alert-error" *ngIf="userActionError()" style="margin-bottom:14px;">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ userActionError() }}</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" class="form-input" placeholder="e.g. Akosua Frimpong" [(ngModel)]="newAdminUser.full_name" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-input" placeholder="name@voltgo.com" [(ngModel)]="newAdminUser.email" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input type="text" class="form-input" placeholder="0551234567" [(ngModel)]="newAdminUser.phone" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assign Role</label>
+        <select class="form-select" [(ngModel)]="newAdminUser.role_id">
+          <option *ngFor="let r of roles()" [value]="r.id">{{ r.name }}</option>
+        </select>
+      </div>
+      <p class="perm-note">
+        <i class="ri-information-line"></i> A temporary password will be generated automatically. The new admin
+        will be required to change it on first login.
+      </p>
+
+      <div class="modal-footer">
+        <button class="btn-outline" (click)="closeCreateUserModal()">Cancel</button>
+        <button class="btn-green"
+          [disabled]="!newAdminUser.full_name.trim() || !newAdminUser.email.trim() || !newAdminUser.phone.trim() || !newAdminUser.role_id || userActionPending()"
+          (click)="createAdminUser()">
+          <i class="ri-user-add-line"></i> Create Admin User
+        </button>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="createdUserCredentials() as creds">
+      <div class="success-box">
+        <i class="ri-checkbox-circle-fill"></i>
+        <h2>Admin user created</h2>
+        <p>Share these temporary credentials with {{ creds.email }} securely. They'll be asked to set a new password on first login.</p>
+      </div>
+
+      <div class="credential-box">
+        <div class="credential-row">
+          <span class="info-label">Email</span>
+          <span class="info-value">{{ creds.email }}</span>
+        </div>
+        <div class="credential-row">
+          <span class="info-label">Temporary Password</span>
+          <span class="info-value credential-pass">{{ creds.password }}</span>
+        </div>
+      </div>
+
+      <p class="perm-note">
+        <i class="ri-alarm-warning-line"></i> This password is shown only once and cannot be retrieved later — copy it now.
+      </p>
+
+      <div class="modal-footer">
+        <button class="btn-dark" (click)="closeCreateUserModal()">Done</button>
+      </div>
+    </ng-container>
+  </div>
+</div>
+
+

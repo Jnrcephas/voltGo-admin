@@ -1,41 +1,49 @@
 <!-- ---- KPI CARDS ---- -->
 <section class="stats-grid">
-  <div class="stat-card" *ngFor="let stat of stats">
-    <div class="stat-icon" [ngClass]="{
-      'icon-blue': stat.color === 'blue',
-      'icon-orange': stat.color === 'orange',
-      'icon-purple': stat.color === 'purple',
-      'icon-green': stat.color === 'green',
-      'icon-red': stat.color === 'red'
-    }">
-      <i [ngClass]="stat.icon"></i>
-    </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-green"><i class="ri-money-dollar-circle-fill"></i></div>
     <div>
-      <p class="stat-val">{{ stat.value }}</p>
-      <p class="stat-lbl">{{ stat.label }}</p>
+      <p class="stat-val">{{ total() }}</p>
+      <p class="stat-lbl">Total Payments</p>
     </div>
-    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
-      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
-      {{ stat.change }}
-    </span>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-blue"><i class="ri-checkbox-circle-fill"></i></div>
+    <div>
+      <p class="stat-val">{{ payments().filter(p => p.status === 'success').length }}</p>
+      <p class="stat-lbl">Successful (this page)</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-orange"><i class="ri-hourglass-line"></i></div>
+    <div>
+      <p class="stat-val">{{ payments().filter(p => p.status === 'pending').length }}</p>
+      <p class="stat-lbl">Pending (this page)</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-red"><i class="ri-error-warning-fill"></i></div>
+    <div>
+      <p class="stat-val">{{ payments().filter(p => p.status === 'failed').length }}</p>
+      <p class="stat-lbl">Failed (this page)</p>
+    </div>
   </div>
 </section>
 
-<!-- ---- REVENUE CHART + PAYMENT SPLIT ---- -->
+<!-- ---- REVENUE CHART + PAYMENT SPLIT (decorative — no analytics endpoint yet) ---- -->
 <section class="mid-row">
 
   <div class="card trend-card">
     <div class="card-hdr">
       <h2 class="card-title">Weekly Revenue</h2>
-      <button class="btn-outline">
-        <i class="ri-download-2-line"></i> Export
-      </button>
+      <span class="more-dots">···</span>
     </div>
+    <app-mock-data-banner message="No revenue analytics endpoint exists yet — this chart shows sample data."></app-mock-data-banner>
     <div class="bar-chart">
       <div class="bar-col" *ngFor="let d of weeklyRevenue">
         <div class="bar-track">
           <div class="bar-fill" [style.height.%]="(d.value / maxRevenue) * 100">
-            <span class="bar-value">GHS {{ d.value | number }}</span>
+            <span class="bar-value">{{ d.value | ghs }}</span>
           </div>
         </div>
         <span class="bar-label">{{ d.day }}</span>
@@ -49,6 +57,7 @@
         <h2 class="card-title">Payment Methods</h2>
         <span class="more-dots">···</span>
       </div>
+      <app-mock-data-banner message="Payment method breakdown is not yet returned by any endpoint — preview data only."></app-mock-data-banner>
       <div class="pm-list">
         <div class="pm-row" *ngFor="let pm of paymentSplit">
           <div class="pm-top">
@@ -83,24 +92,31 @@
         <i class="ri-search-line"></i>
         <input type="text" placeholder="Search..." [(ngModel)]="searchTerm" />
       </div>
-      <select class="filter-select" [(ngModel)]="statusFilter">
+      <select class="filter-select" [(ngModel)]="statusFilter" (change)="activeTab === 'transactions' && applyFilters()">
         <option value="All">All Status</option>
-        <option *ngIf="activeTab === 'transactions'" value="Success">Success</option>
-        <option value="Pending">Pending</option>
-        <option value="Failed">Failed</option>
+        <option *ngIf="activeTab === 'transactions'" value="success">Success</option>
+        <option *ngIf="activeTab === 'transactions'" value="pending">Pending</option>
+        <option *ngIf="activeTab === 'transactions'" value="failed">Failed</option>
+        <option *ngIf="activeTab === 'transactions'" value="refunded">Refunded</option>
         <option *ngIf="activeTab === 'payouts'" value="Paid">Paid</option>
+        <option *ngIf="activeTab === 'payouts'" value="Pending">Pending</option>
+        <option *ngIf="activeTab === 'payouts'" value="Failed">Failed</option>
       </select>
-      <select class="filter-select" *ngIf="activeTab === 'transactions'" [(ngModel)]="typeFilter">
+      <select class="filter-select" *ngIf="activeTab === 'transactions'" [(ngModel)]="typeFilter" (change)="applyFilters()">
         <option value="All">All Types</option>
-        <option value="Bundle Purchase">Bundle Purchase</option>
-        <option value="Pay-Per-Delivery">Pay-Per-Delivery</option>
-        <option value="Refund">Refund</option>
-        <option value="Top-up">Top-up</option>
+        <option value="bundle_purchase">Bundle Purchase</option>
+        <option value="delivery_payment">Pay-Per-Delivery</option>
+        <option value="refund">Refund</option>
       </select>
-      <button class="btn-dark" *ngIf="activeTab === 'payouts'">
-        <i class="ri-send-plane-fill"></i> Process Payouts
+      <button class="btn-dark" *ngIf="activeTab === 'transactions'" (click)="openActivateModal()">
+        <i class="ri-flashlight-line"></i> Activate Payment
       </button>
     </div>
+  </div>
+
+  <div class="auth-alert auth-alert-error" *ngIf="error() && activeTab === 'transactions'" style="margin: 0 20px 16px;">
+    <i class="ri-error-warning-line"></i>
+    <span>{{ error() }}</span>
   </div>
 
   <!-- Transactions table -->
@@ -108,7 +124,7 @@
     <table class="tbl">
       <thead>
         <tr>
-          <th>Txn ID</th>
+          <th>Reference</th>
           <th>Customer</th>
           <th>Type</th>
           <th>Method</th>
@@ -118,100 +134,145 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let t of filteredTransactions">
-          <td class="td-track">{{ t.txnId }}</td>
-          <td>{{ t.customer }}</td>
-          <td>{{ t.type }}</td>
-          <td>{{ t.method }}</td>
-          <td [style.color]="t.amount < 0 ? '#ef4444' : '#1a1a2e'" style="font-weight:600;">
-            {{ t.amount < 0 ? '-' : '' }}GHS {{ (t.amount < 0 ? -t.amount : t.amount) | number }}
-          </td>
-          <td>
-            <span class="badge"
-              [ngClass]="{
-                'badge-completed': t.status === 'Success',
-                'badge-pending': t.status === 'Pending',
-                'badge-cancelled': t.status === 'Failed'
-              }">{{ t.status }}</span>
-          </td>
-          <td>{{ t.date }}</td>
+        <tr *ngIf="loading()">
+          <td colspan="7"><div class="empty-state"><i class="ri-loader-4-line spin"></i> Loading payments...</div></td>
         </tr>
-        <tr *ngIf="filteredTransactions.length === 0">
-          <td colspan="7">
-            <div class="empty-state">
-              <i class="ri-inbox-line"></i>
-              No transactions match your filters
-            </div>
-          </td>
-        </tr>
+        <ng-container *ngIf="!loading()">
+          <tr *ngFor="let t of filteredTransactions">
+            <td class="td-track">{{ t.reference }}</td>
+            <td>{{ t.customer.full_name }}</td>
+            <td>{{ typeLabel(t.type) }}</td>
+            <td>{{ t.method || '—' }}</td>
+            <td [style.color]="t.type === 'refund' ? '#ef4444' : '#1a1a2e'" style="font-weight:600;">
+              {{ t.type === 'refund' ? '-' : '' }}{{ (t.amount < 0 ? -t.amount : t.amount) | ghs:true }}
+            </td>
+            <td>
+              <span class="badge"
+                [ngClass]="{
+                  'badge-completed': t.status === 'success',
+                  'badge-pending': t.status === 'pending',
+                  'badge-cancelled': t.status === 'failed',
+                  'badge-info': t.status === 'refunded'
+                }">{{ t.status | titlecase }}</span>
+            </td>
+            <td>{{ t.created_at | date: 'MMM d, y' }}</td>
+          </tr>
+          <tr *ngIf="filteredTransactions.length === 0">
+            <td colspan="7">
+              <div class="empty-state">
+                <i class="ri-inbox-line"></i>
+                No transactions match your filters
+              </div>
+            </td>
+          </tr>
+        </ng-container>
       </tbody>
     </table>
   </div>
 
-  <!-- Payouts table -->
-  <div class="tbl-wrap" *ngIf="activeTab === 'payouts'">
-    <table class="tbl">
-      <thead>
-        <tr>
-          <th>Rider</th>
-          <th>Rider ID</th>
-          <th>Amount</th>
-          <th>Method</th>
-          <th>Status</th>
-          <th>Date</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let p of filteredPayouts">
-          <td>
-            <div class="rider-left">
-              <img [src]="p.avatar" [alt]="p.riderName" class="avatar-sm" />
-              <span style="font-weight:600;color:#1a1a2e;">{{ p.riderName }}</span>
-            </div>
-          </td>
-          <td class="td-track">{{ p.riderId }}</td>
-          <td style="font-weight:600;">GHS {{ p.amount | number }}</td>
-          <td>{{ p.method }}</td>
-          <td>
-            <span class="badge"
-              [ngClass]="{
-                'badge-completed': p.status === 'Paid',
-                'badge-pending': p.status === 'Pending',
-                'badge-cancelled': p.status === 'Failed'
-              }">{{ p.status }}</span>
-          </td>
-          <td>{{ p.date }}</td>
-          <td>
-            <div class="row-actions">
-              <button title="View details"><i class="ri-eye-line"></i></button>
-              <button title="Retry payout" *ngIf="p.status === 'Failed'"><i class="ri-refresh-line"></i></button>
-            </div>
-          </td>
-        </tr>
-        <tr *ngIf="filteredPayouts.length === 0">
-          <td colspan="7">
-            <div class="empty-state">
-              <i class="ri-inbox-line"></i>
-              No payouts match your filters
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="pagination">
-    <span class="pagination-info">
-      Showing {{ activeTab === 'transactions' ? filteredTransactions.length : filteredPayouts.length }} results
-    </span>
-    <div class="pagination-controls">
-      <button class="page-btn"><i class="ri-arrow-left-s-line"></i></button>
-      <button class="page-btn active">1</button>
-      <button class="page-btn">2</button>
-      <button class="page-btn">3</button>
-      <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+  <!-- Payouts table (preview data — no admin payouts endpoint yet) -->
+  <div *ngIf="activeTab === 'payouts'">
+    <div style="padding: 0 20px;">
+      <app-mock-data-banner message="There is no admin endpoint yet for rider payouts — this table shows sample data only."></app-mock-data-banner>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Rider</th>
+            <th>Rider ID</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of filteredPayouts">
+            <td>
+              <div class="rider-left">
+                <img [src]="p.avatar" [alt]="p.riderName" class="avatar-sm" />
+                <span style="font-weight:600;color:#1a1a2e;">{{ p.riderName }}</span>
+              </div>
+            </td>
+            <td class="td-track">{{ p.riderId }}</td>
+            <td style="font-weight:600;">{{ p.amount | ghs }}</td>
+            <td>{{ p.method }}</td>
+            <td>
+              <span class="badge"
+                [ngClass]="{
+                  'badge-completed': p.status === 'Paid',
+                  'badge-pending': p.status === 'Pending',
+                  'badge-cancelled': p.status === 'Failed'
+                }">{{ p.status }}</span>
+            </td>
+            <td>{{ p.date }}</td>
+            <td>
+              <div class="row-actions">
+                <button title="View details" disabled><i class="ri-eye-line"></i></button>
+                <button title="Retry payout" disabled *ngIf="p.status === 'Failed'"><i class="ri-refresh-line"></i></button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredPayouts.length === 0">
+            <td colspan="7">
+              <div class="empty-state">
+                <i class="ri-inbox-line"></i>
+                No payouts match your filters
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
+  <div class="pagination" *ngIf="activeTab === 'transactions'">
+    <span class="pagination-info">Showing page {{ page() }} of {{ pages() }} · {{ total() }} payments total</span>
+    <div class="pagination-controls">
+      <button class="page-btn" [disabled]="page() <= 1" (click)="goToPage(page() - 1)"><i class="ri-arrow-left-s-line"></i></button>
+      <button class="page-btn active">{{ page() }}</button>
+      <button class="page-btn" [disabled]="page() >= pages()" (click)="goToPage(page() + 1)"><i class="ri-arrow-right-s-line"></i></button>
+    </div>
+  </div>
 </section>
+
+<!-- ---- ACTIVATE PAYMENT MODAL ---- -->
+<div class="modal-overlay" *ngIf="showActivateModal()" (click)="closeActivateModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Manually Activate Payment</h3>
+      <button class="modal-close" (click)="closeActivateModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <p class="modal-sub">
+      Use this when a customer was charged via Paystack but their credits or bundle weren't activated due to a missed webhook.
+    </p>
+
+    <div class="auth-alert auth-alert-error" *ngIf="activateError()" style="margin: 14px 0;">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ activateError() }}</span>
+    </div>
+
+    <div class="auth-alert auth-alert-success" *ngIf="activateSuccess()" style="margin: 14px 0;">
+      <i class="ri-checkbox-circle-line"></i>
+      <span>Payment activated successfully.</span>
+    </div>
+
+    <div class="form-group" *ngIf="!activateSuccess()">
+      <label class="form-label">Paystack Reference</label>
+      <input type="text" class="form-input" placeholder="e.g. VGB-1781344431934-kv1w6z"
+        [ngModel]="activateReference()" (ngModelChange)="activateReference.set($event)" />
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="closeActivateModal()">{{ activateSuccess() ? 'Close' : 'Cancel' }}</button>
+      <button class="btn-green" *ngIf="!activateSuccess()" [disabled]="!activateReference().trim() || activatePending()" (click)="confirmActivate()">
+        <i class="ri-flashlight-line"></i> Activate
+      </button>
+    </div>
+  </div>
+</div>
+
+

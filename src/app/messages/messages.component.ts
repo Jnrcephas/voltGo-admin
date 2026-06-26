@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MockDataBannerComponent } from '../shared/mock-data-banner.component';
 
 interface Conversation {
   id: string;
@@ -21,7 +22,7 @@ interface ChatMessage {
 @Component({
   selector: 'app-messages',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MockDataBannerComponent],
   templateUrl: './messages.component.html',
   styleUrls: ['./messages.component.css']
 })

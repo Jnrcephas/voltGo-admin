@@ -1,23 +1,32 @@
 <!-- ---- KPI CARDS ---- -->
 <section class="stats-grid">
-  <div class="stat-card" *ngFor="let stat of stats">
-    <div class="stat-icon" [ngClass]="{
-      'icon-blue': stat.color === 'blue',
-      'icon-orange': stat.color === 'orange',
-      'icon-purple': stat.color === 'purple',
-      'icon-green': stat.color === 'green',
-      'icon-red': stat.color === 'red'
-    }">
-      <i [ngClass]="stat.icon"></i>
-    </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-orange"><i class="ri-shopping-bag-fill"></i></div>
     <div>
-      <p class="stat-val">{{ stat.value }}</p>
-      <p class="stat-lbl">{{ stat.label }}</p>
+      <p class="stat-val">{{ activeCount }}</p>
+      <p class="stat-lbl">Active (this page)</p>
     </div>
-    <span class="trend-pill" [ngClass]="stat.positive ? 'trend-up' : 'trend-down'">
-      <i [ngClass]="stat.positive ? 'ri-arrow-up-line' : 'ri-arrow-down-line'"></i>
-      {{ stat.change }}
-    </span>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-red"><i class="ri-error-warning-fill"></i></div>
+    <div>
+      <p class="stat-val">{{ unassignedCount }}</p>
+      <p class="stat-lbl">Unassigned (this page)</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-purple"><i class="ri-alarm-warning-fill"></i></div>
+    <div>
+      <p class="stat-val">{{ slaBreachCount }}</p>
+      <p class="stat-lbl">SLA Breaches (this page)</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-green"><i class="ri-checkbox-circle-fill"></i></div>
+    <div>
+      <p class="stat-val">{{ completedCount }}</p>
+      <p class="stat-lbl">Delivered (this page)</p>
+    </div>
   </div>
 </section>
 
@@ -30,22 +39,30 @@
         <i class="ri-search-line"></i>
         <input type="text" placeholder="Search order, customer, rider..." [(ngModel)]="searchTerm" />
       </div>
-      <select class="filter-select" [(ngModel)]="statusFilter">
+      <select class="filter-select" [(ngModel)]="statusFilter" (change)="applyFilters()">
         <option value="All">All Status</option>
-        <option value="Pending">Pending</option>
-        <option value="Assigned">Assigned</option>
-        <option value="In Transit">In Transit</option>
-        <option value="Completed">Completed</option>
-        <option value="Cancelled">Cancelled</option>
+        <option value="pending">Pending</option>
+        <option value="searching">Searching</option>
+        <option value="assigned">Assigned</option>
+        <option value="rider_arriving">Rider Arriving</option>
+        <option value="collected">Collected</option>
+        <option value="in_transit">In Transit</option>
+        <option value="delivered">Delivered</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="failed">Failed</option>
       </select>
-      <select class="filter-select" [(ngModel)]="zoneFilter">
-        <option value="All">All Zones</option>
-        <option *ngFor="let z of zones" [value]="z">{{ z }}</option>
+      <select class="filter-select" [(ngModel)]="vehicleTypeFilter" (change)="applyFilters()">
+        <option value="All">All Vehicles</option>
+        <option value="bicycle">Bicycle</option>
+        <option value="motorcycle">E-Motorcycle</option>
       </select>
-      <button class="btn-outline">
-        <i class="ri-upload-2-line"></i> Bulk Import
-      </button>
+      <button class="btn-icon-only" title="Refresh" (click)="load(page())"><i class="ri-refresh-line"></i></button>
     </div>
+  </div>
+
+  <div class="auth-alert auth-alert-error" *ngIf="error()" style="margin: 0 20px 16px;">
+    <i class="ri-error-warning-line"></i>
+    <span>{{ error() }}</span>
   </div>
 
   <div class="tbl-wrap">
@@ -64,98 +81,137 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let order of filteredOrders" [class.sla-row]="order.slaBreach">
-          <td class="td-track">
-            {{ order.id }}
-            <i *ngIf="order.slaBreach" class="ri-alarm-warning-fill sla-flag" title="SLA breach - exceeded promised ETA"></i>
-          </td>
-          <td>{{ order.customer }}</td>
-          <td>
-            <div class="rider-cell" *ngIf="order.rider; else noRider">
-              <img [src]="order.riderAvatar" [alt]="order.rider" class="avatar-sm" />
-              <span>{{ order.rider }}</span>
-            </div>
-            <ng-template #noRider>
-              <span class="unassigned-tag">Unassigned</span>
-            </ng-template>
-          </td>
-          <td>{{ order.pickup }}</td>
-          <td>{{ order.dropoff }}</td>
-          <td>
-            <span class="vehicle-tag">
-              <i [ngClass]="order.vehicleType === 'Bicycle' ? 'ri-bike-line' : 'ri-e-bike-2-line'"></i>
-              {{ order.vehicleType }}
-            </span>
-          </td>
-          <td style="font-weight:600;">GHS {{ order.price }}</td>
-          <td>
-            <span class="badge"
-              [ngClass]="{
-                'badge-pending': order.status === 'Pending' || order.status === 'Assigned',
-                'badge-info': order.status === 'In Transit',
-                'badge-completed': order.status === 'Completed',
-                'badge-cancelled': order.status === 'Cancelled'
-              }">{{ order.status }}</span>
-          </td>
-          <td>
-            <div class="row-actions">
-              <button title="View order details"><i class="ri-eye-line"></i></button>
-              <button title="Reassign rider" (click)="openReassign(order)"
-                [disabled]="order.status === 'Completed' || order.status === 'Cancelled'">
-                <i class="ri-shuffle-line"></i>
-              </button>
-              <button title="Cancel order" (click)="cancelOrder(order)"
-                [disabled]="order.status === 'Completed' || order.status === 'Cancelled'">
-                <i class="ri-close-circle-line"></i>
-              </button>
-            </div>
-          </td>
+        <tr *ngIf="loading()">
+          <td colspan="9"><div class="empty-state"><i class="ri-loader-4-line spin"></i> Loading orders...</div></td>
         </tr>
-        <tr *ngIf="filteredOrders.length === 0">
-          <td colspan="9">
-            <div class="empty-state">
-              <i class="ri-inbox-line"></i>
-              No orders match your filters
-            </div>
-          </td>
-        </tr>
+        <ng-container *ngIf="!loading()">
+          <tr *ngFor="let order of filteredOrders" [class.sla-row]="order.sla_breach">
+            <td class="td-track">
+              {{ order.tracking_no || order.id }}
+              <i *ngIf="order.sla_breach" class="ri-alarm-warning-fill sla-flag" title="SLA breach - exceeded promised ETA"></i>
+            </td>
+            <td>{{ order.customer.full_name }}</td>
+            <td>
+              <div class="rider-cell" *ngIf="order.rider; else noRider">
+                <img [src]="order.rider.avatar_url || 'https://i.pravatar.cc/32?u=' + order.rider.id" [alt]="order.rider.full_name" class="avatar-sm" />
+                <span>{{ order.rider.full_name }}</span>
+              </div>
+              <ng-template #noRider>
+                <span class="unassigned-tag">Unassigned</span>
+              </ng-template>
+            </td>
+            <td>{{ order.pickup_address }}</td>
+            <td>{{ order.dropoff_address }}</td>
+            <td>
+              <span class="vehicle-tag">
+                <i [ngClass]="order.vehicle_type === 'bicycle' ? 'ri-bike-line' : 'ri-e-bike-2-line'"></i>
+                {{ order.vehicle_type === 'bicycle' ? 'Bicycle' : 'E-Motorcycle' }}
+              </span>
+            </td>
+            <td style="font-weight:600;">{{ order.price | ghs:true }}</td>
+            <td>
+              <span class="badge" [ngClass]="statusBadgeClass(order.status)">{{ statusLabel(order.status) }}</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button title="Reassign rider" (click)="openReassign(order)"
+                  [disabled]="order.status === 'delivered' || order.status === 'cancelled' || order.status === 'failed'">
+                  <i class="ri-shuffle-line"></i>
+                </button>
+                <button title="Cancel order" (click)="openCancelModal(order)"
+                  [disabled]="order.status === 'delivered' || order.status === 'cancelled' || order.status === 'failed'">
+                  <i class="ri-close-circle-line"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredOrders.length === 0">
+            <td colspan="9">
+              <div class="empty-state">
+                <i class="ri-inbox-line"></i>
+                No orders match your filters
+              </div>
+            </td>
+          </tr>
+        </ng-container>
       </tbody>
     </table>
   </div>
 
   <div class="pagination">
-    <span class="pagination-info">Showing {{ filteredOrders.length }} of {{ orders.length }} orders</span>
+    <span class="pagination-info">Showing page {{ page() }} of {{ pages() }} · {{ total() }} orders total</span>
     <div class="pagination-controls">
-      <button class="page-btn"><i class="ri-arrow-left-s-line"></i></button>
-      <button class="page-btn active">1</button>
-      <button class="page-btn">2</button>
-      <button class="page-btn"><i class="ri-arrow-right-s-line"></i></button>
+      <button class="page-btn" [disabled]="page() <= 1" (click)="goToPage(page() - 1)"><i class="ri-arrow-left-s-line"></i></button>
+      <button class="page-btn active">{{ page() }}</button>
+      <button class="page-btn" [disabled]="page() >= pages()" (click)="goToPage(page() + 1)"><i class="ri-arrow-right-s-line"></i></button>
     </div>
   </div>
 </section>
 
 <!-- ---- REASSIGN MODAL ---- -->
-<div class="modal-overlay" *ngIf="showReassignModal" (click)="closeReassign()">
+<div class="modal-overlay" *ngIf="showReassignModal()" (click)="closeReassign()">
   <div class="modal-box" (click)="$event.stopPropagation()">
     <div class="modal-hdr">
-      <h3 class="modal-title">Reassign Rider</h3>
+      <h3 class="modal-title">Assign / Reassign Rider</h3>
       <button class="modal-close" (click)="closeReassign()"><i class="ri-close-line"></i></button>
     </div>
 
-    <p class="modal-sub">Order {{ selectedOrder?.id }} · {{ selectedOrder?.pickup }} → {{ selectedOrder?.dropoff }}</p>
+    <p class="modal-sub" *ngIf="selectedOrder() as o">
+      Order {{ o.tracking_no || o.id }} · {{ o.pickup_address }} → {{ o.dropoff_address }}
+    </p>
+
+    <div class="auth-alert auth-alert-error" *ngIf="actionError()" style="margin-bottom:14px;">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ actionError() }}</span>
+    </div>
 
     <div class="form-group">
       <label class="form-label">Select Rider</label>
-      <select class="form-select" [(ngModel)]="reassignTarget">
+      <select class="form-select" [ngModel]="reassignTarget()" (ngModelChange)="reassignTarget.set($event)">
         <option value="" disabled>Choose a rider</option>
-        <option *ngFor="let r of availableRiders" [value]="r">{{ r }}</option>
+        <option *ngFor="let r of availableRiders()" [value]="r.id">{{ r.full_name }}</option>
       </select>
+      <p class="field-error" *ngIf="availableRiders().length === 0" style="margin-top:8px;">
+        No online riders available right now.
+      </p>
     </div>
 
     <div class="modal-footer">
       <button class="btn-outline" (click)="closeReassign()">Cancel</button>
-      <button class="btn-green" (click)="confirmReassign()">
-        <i class="ri-check-line"></i> Confirm Reassign
+      <button class="btn-green" (click)="confirmReassign()" [disabled]="!reassignTarget() || actionPending()">
+        <i class="ri-check-line"></i> Confirm Assignment
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ---- CANCEL MODAL ---- -->
+<div class="modal-overlay" *ngIf="showCancelModal()" (click)="closeCancelModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Cancel Order</h3>
+      <button class="modal-close" (click)="closeCancelModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <p class="modal-sub" *ngIf="selectedOrder() as o">
+      This will cancel order {{ o.tracking_no || o.id }}, free the assigned rider, and refund the customer.
+    </p>
+
+    <div class="auth-alert auth-alert-error" *ngIf="actionError()" style="margin-bottom:14px;">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ actionError() }}</span>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Cancellation Reason (required)</label>
+      <textarea class="form-textarea" rows="3" placeholder="e.g. Customer requested cancellation"
+        [ngModel]="cancelReason()" (ngModelChange)="cancelReason.set($event)"></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="closeCancelModal()">Keep Order</button>
+      <button class="btn-danger" (click)="confirmCancel()" [disabled]="!cancelReason().trim() || actionPending()">
+        <i class="ri-close-circle-line"></i> Confirm Cancellation
       </button>
     </div>
   </div>

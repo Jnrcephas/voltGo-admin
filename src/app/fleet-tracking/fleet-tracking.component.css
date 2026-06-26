@@ -8,10 +8,12 @@
   margin-bottom: 22px;
   align-items: stretch;
 }
+
 .map-card {
   display: flex;
   flex-direction: column;
 }
+
 .detail-card {
   display: flex;
   flex-direction: column;
@@ -26,6 +28,7 @@
   overflow: hidden;
   background: #e8eaf0;
 }
+
 .map-box iframe {
   width: 100%;
   height: 100%;
@@ -39,6 +42,7 @@
   z-index: 10;
   cursor: pointer;
 }
+
 .mpin-vehicle {
   width: 32px;
   height: 32px;
@@ -49,16 +53,34 @@
   color: #fff;
   font-size: 15px;
   border: 3px solid #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   transition: transform 0.15s;
 }
-.mpin:hover .mpin-vehicle { transform: scale(1.15); }
-.mpin-selected .mpin-vehicle { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(34,197,94,0.25); }
 
-.mpin-online   { background: #22c55e; }
-.mpin-idle     { background: #f59e0b; }
-.mpin-offline  { background: #9ca3af; }
-.mpin-flagged  { background: #ef4444; }
+.mpin:hover .mpin-vehicle {
+  transform: scale(1.15);
+}
+
+.mpin-selected .mpin-vehicle {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
+}
+
+.mpin-online {
+  background: #22c55e;
+}
+
+.mpin-idle {
+  background: #f59e0b;
+}
+
+.mpin-offline {
+  background: #9ca3af;
+}
+
+.mpin-flagged {
+  background: #ef4444;
+}
 
 .map-legend {
   display: flex;
@@ -69,38 +91,64 @@
   color: #555;
   font-weight: 500;
 }
+
 .ldot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   display: inline-block;
 }
-.ldot-green { background: #22c55e; }
-.ldot-red   { background: #ef4444; margin-left: 14px; }
-.ltext { font-size: 13px; color: #555; }
+
+.ldot-green {
+  background: #22c55e;
+}
+
+.ldot-red {
+  background: #ef4444;
+  margin-left: 14px;
+}
+
+.ldot-amber {
+  background: #f59e0b;
+  margin-left: 14px;
+}
+
+.ldot-grey {
+  background: #9ca3af;
+  margin-left: 14px;
+}
+
+.ltext {
+  font-size: 13px;
+  color: #555;
+}
 
 /* ---------- VEHICLE DETAIL PANEL ---------- */
 .vehicle-detail {
   display: flex;
   flex-direction: column;
 }
+
 .vd-top {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 14px;
 }
+
 .avatar-md {
   width: 46px;
   height: 46px;
   border-radius: 50%;
   object-fit: cover;
 }
+
 .vd-name {
   font-size: 14px;
   font-weight: 700;
   color: #1a1a2e;
 }
+
 .vd-id {
   font-size: 12px;
   color: #aaa;
@@ -119,7 +167,12 @@
   margin-bottom: 14px;
   line-height: 1.4;
 }
-.vd-alert i { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+.vd-alert i {
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
 
 .vd-stat-row {
   display: flex;
@@ -128,7 +181,11 @@
   padding: 9px 0;
   border-bottom: 1px solid #fafafa;
 }
-.vd-stat-row:last-of-type { border-bottom: none; }
+
+.vd-stat-row:last-of-type {
+  border-bottom: none;
+}
+
 .vd-label {
   font-size: 12.5px;
   color: #888;
@@ -136,7 +193,12 @@
   align-items: center;
   gap: 6px;
 }
-.vd-label i { color: #aaa; font-size: 15px; }
+
+.vd-label i {
+  color: #aaa;
+  font-size: 15px;
+}
+
 .vd-value {
   font-size: 13px;
   font-weight: 600;
@@ -148,6 +210,7 @@
   gap: 8px;
   margin-top: 16px;
 }
+
 .vd-btn {
   flex: 1;
   justify-content: center;
@@ -161,11 +224,13 @@
   object-fit: cover;
   flex-shrink: 0;
 }
+
 .cust-left {
   display: flex;
   align-items: center;
   gap: 10px;
 }
+
 .vehicle-tag {
   display: inline-flex;
   align-items: center;
@@ -173,9 +238,15 @@
   font-size: 12.5px;
   color: #555;
 }
-.vehicle-tag i { color: #888; font-size: 15px; }
 
-.clickable-row { cursor: pointer; }
+.vehicle-tag i {
+  color: #888;
+  font-size: 15px;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
 
 .sla-flag {
   color: #ef4444;
@@ -190,6 +261,7 @@
   margin-bottom: 16px;
   margin-top: -8px;
 }
+
 .playback-preview {
   background: #f8fafc;
   border: 1px dashed #e2e8f0;
@@ -199,11 +271,13 @@
   color: #bbb;
   margin-bottom: 4px;
 }
+
 .playback-preview i {
   font-size: 30px;
   display: block;
   margin-bottom: 8px;
 }
+
 .playback-preview p {
   font-size: 12.5px;
 }
@@ -213,7 +287,21 @@
   .mid-row {
     grid-template-columns: 1fr;
   }
+
   .map-box {
     min-height: 320px;
   }
+}
+
+.gmap-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+}
+
+
+.gmap-container:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
 }

@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MockDataBannerComponent } from '../shared/mock-data-banner.component';
 
 @Component({
   selector: 'app-analytics',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MockDataBannerComponent],
   templateUrl: './analytics.component.html',
   styleUrls: ['./analytics.component.css']
 })

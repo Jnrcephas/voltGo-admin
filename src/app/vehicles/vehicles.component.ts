@@ -1,134 +1,215 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
-interface Vehicle {
-  vehicleId: string;
-  type: 'Bicycle' | 'E-Motorcycle';
-  plateNo: string | null;
-  gpsTrackerId: string;
-  dashcamId: string | null;
-  battery: number;
-  assignedRider: string | null;
-  assignedRiderAvatar?: string;
-  status: 'Available' | 'Assigned' | 'Maintenance' | 'Retired';
-  addedDate: string;
-}
+import { VehicleService } from '../core/services/vehicle.service';
+import { RiderService } from '../core/services/rider.service';
+import { AdminVehicle, AdminRider, VehicleType, VehicleStatus } from '../core/models';
+import { ApiError } from '../core/interceptors/error.interceptor';
 
 @Component({
   selector: 'app-vehicles',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './vehicles.component.html',
-  styleUrls: ['./vehicles.component.css']
+  styleUrls: ['./vehicles.component.css'],
 })
-export class VehiclesComponent {
+export class VehiclesComponent implements OnInit {
+  private readonly vehicleService = inject(VehicleService);
+  private readonly riderService = inject(RiderService);
 
-  stats = [
-    { label: 'Total Fleet',     value: '90', change: '+0%', positive: true,  icon: 'ri-e-bike-2-fill',        color: 'blue'   },
-    { label: 'Available',       value: '14', change: '+2',  positive: true,  icon: 'ri-checkbox-circle-fill', color: 'green'  },
-    { label: 'Assigned',        value: '70', change: '+1%', positive: true,  icon: 'ri-user-follow-fill',     color: 'purple' },
-    { label: 'In Maintenance',  value: '6',  change: '+2',  positive: false, icon: 'ri-tools-fill',           color: 'orange' },
-  ];
+  readonly vehicles = signal<AdminVehicle[]>([]);
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly total = signal(0);
+  readonly page = signal(1);
+  readonly pages = signal(1);
+
+  readonly unassignedRiders = signal<AdminRider[]>([]);
 
   searchTerm = '';
-  typeFilter = 'All';
-  statusFilter = 'All';
+  typeFilter: 'All' | VehicleType = 'All';
+  statusFilter: 'All' | VehicleStatus = 'All';
 
-  unassignedRiders = [
-    'Linda Mensah', 'Kojo Asante', 'Esi Owusu', 'Nana Yeboah'
-  ];
+  readonly showAddModal = signal(false);
+  readonly showAssignModal = signal(false);
+  readonly assignTarget = signal<AdminVehicle | null>(null);
+  readonly selectedRiderToAssign = signal('');
+  readonly actionPending = signal(false);
+  readonly actionError = signal<string | null>(null);
 
-  vehicles: Vehicle[] = [
-    { vehicleId: 'VH-2201', type: 'E-Motorcycle', plateNo: 'GR-4421-23', gpsTrackerId: 'GPS-8801', dashcamId: 'DC-5501', battery: 82,  assignedRider: 'Eddie Lobanovskiy', assignedRiderAvatar: 'https://i.pravatar.cc/36?img=11', status: 'Assigned',  addedDate: 'Jan 10, 2026' },
-    { vehicleId: 'VH-2202', type: 'Bicycle',       plateNo: null,         gpsTrackerId: 'GPS-8802', dashcamId: null,        battery: 100, assignedRider: 'Alexey Stave',      assignedRiderAvatar: 'https://i.pravatar.cc/36?img=12', status: 'Assigned',  addedDate: 'Jan 10, 2026' },
-    { vehicleId: 'VH-2203', type: 'E-Motorcycle', plateNo: 'GR-4422-23', gpsTrackerId: 'GPS-8803', dashcamId: 'DC-5502', battery: 64,  assignedRider: 'Anton Tkacheve',    assignedRiderAvatar: 'https://i.pravatar.cc/36?img=13', status: 'Assigned',  addedDate: 'Jan 12, 2026' },
-    { vehicleId: 'VH-2204', type: 'E-Motorcycle', plateNo: 'GR-4423-23', gpsTrackerId: 'GPS-8804', dashcamId: 'DC-5503', battery: 19,  assignedRider: 'Kwesi Boateng',     assignedRiderAvatar: 'https://i.pravatar.cc/36?img=15', status: 'Maintenance', addedDate: 'Feb 02, 2026' },
-    { vehicleId: 'VH-2205', type: 'Bicycle',       plateNo: null,         gpsTrackerId: 'GPS-8805', dashcamId: null,        battery: 91,  assignedRider: 'Yaw Darko',         assignedRiderAvatar: 'https://i.pravatar.cc/36?img=16', status: 'Assigned',  addedDate: 'Feb 14, 2026' },
-    { vehicleId: 'VH-2206', type: 'E-Motorcycle', plateNo: 'GR-4424-23', gpsTrackerId: 'GPS-8806', dashcamId: 'DC-5504', battery: 73,  assignedRider: 'Linda Mensah',      assignedRiderAvatar: 'https://i.pravatar.cc/36?img=25', status: 'Assigned',  addedDate: 'Mar 01, 2026' },
-    { vehicleId: 'VH-2207', type: 'Bicycle',       plateNo: null,         gpsTrackerId: 'GPS-8807', dashcamId: null,        battery: 100, assignedRider: null,                status: 'Available', addedDate: 'Apr 18, 2026' },
-    { vehicleId: 'VH-2208', type: 'E-Motorcycle', plateNo: 'GR-4425-23', gpsTrackerId: 'GPS-8808', dashcamId: 'DC-5505', battery: 100, assignedRider: null,                status: 'Available', addedDate: 'May 05, 2026' },
-    { vehicleId: 'VH-2209', type: 'E-Motorcycle', plateNo: 'GR-4426-23', gpsTrackerId: 'GPS-8809', dashcamId: 'DC-5506', battery: 0,   assignedRider: null,                status: 'Retired',   addedDate: 'Oct 11, 2025' },
-  ];
-
-  showAddModal = false;
-  showAssignModal = false;
-  assignTarget: Vehicle | null = null;
-  selectedRiderToAssign = '';
-
-  newVehicle: Partial<Vehicle> = {
-    vehicleId: '', type: 'Bicycle', plateNo: '', gpsTrackerId: '', dashcamId: ''
+  newVehicle = {
+    type: 'bicycle' as VehicleType,
+    plate_no: '',
+    gps_tracker_id: '',
+    dashcam_id: '',
   };
 
-  get filteredVehicles(): Vehicle[] {
-    return this.vehicles.filter(v => {
-      const matchesSearch = v.vehicleId.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                             (v.assignedRider?.toLowerCase().includes(this.searchTerm.toLowerCase()) ?? false) ||
-                             (v.plateNo?.toLowerCase().includes(this.searchTerm.toLowerCase()) ?? false);
-      const matchesType = this.typeFilter === 'All' || v.type === this.typeFilter;
-      const matchesStatus = this.statusFilter === 'All' || v.status === this.statusFilter;
-      return matchesSearch && matchesType && matchesStatus;
+  ngOnInit(): void {
+    this.load();
+  }
+
+  load(page = 1): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    this.vehicleService
+      .list({
+        page,
+        limit: 20,
+        type: this.typeFilter === 'All' ? undefined : this.typeFilter,
+        status: this.statusFilter === 'All' ? undefined : this.statusFilter,
+      })
+      .subscribe({
+        next: (data) => {
+          this.vehicles.set(data.vehicles);
+          this.total.set(data.total);
+          this.page.set(data.page);
+          this.pages.set(data.pages || 1);
+          this.loading.set(false);
+        },
+        error: (err: unknown) => {
+          this.loading.set(false);
+          this.error.set(err instanceof ApiError ? err.message : 'Failed to load vehicles.');
+        },
+      });
+  }
+
+  applyFilters(): void {
+    this.load(1);
+  }
+
+  get filteredVehicles(): AdminVehicle[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return this.vehicles();
+    return this.vehicles().filter(
+      (v) =>
+        v.id.toLowerCase().includes(term) ||
+        (v.plate_no?.toLowerCase().includes(term) ?? false) ||
+        (v.assigned_rider?.full_name.toLowerCase().includes(term) ?? false),
+    );
+  }
+
+  get availableCount(): number {
+    return this.vehicles().filter((v) => v.status === 'available').length;
+  }
+  get assignedCount(): number {
+    return this.vehicles().filter((v) => v.status === 'in_use').length;
+  }
+  get maintenanceCount(): number {
+    return this.vehicles().filter((v) => v.status === 'maintenance').length;
+  }
+
+  openAddModal(): void {
+    this.newVehicle = { type: 'bicycle', plate_no: '', gps_tracker_id: '', dashcam_id: '' };
+    this.actionError.set(null);
+    this.showAddModal.set(true);
+  }
+
+  closeAddModal(): void {
+    this.showAddModal.set(false);
+  }
+
+  saveVehicle(): void {
+    if (!this.newVehicle.gps_tracker_id.trim()) return;
+
+    this.actionPending.set(true);
+    this.actionError.set(null);
+
+    this.vehicleService
+      .create({
+        type: this.newVehicle.type,
+        plate_no: this.newVehicle.plate_no || undefined,
+        gps_tracker_id: this.newVehicle.gps_tracker_id,
+        dashcam_id: this.newVehicle.dashcam_id || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.actionPending.set(false);
+          this.closeAddModal();
+          this.load(this.page());
+        },
+        error: (err: unknown) => {
+          this.actionPending.set(false);
+          this.actionError.set(
+            err instanceof ApiError ? err.message : 'Could not add vehicle. Please try again.',
+          );
+        },
+      });
+  }
+
+  openAssignModal(vehicle: AdminVehicle): void {
+    this.assignTarget.set(vehicle);
+    this.selectedRiderToAssign.set('');
+    this.actionError.set(null);
+    this.showAssignModal.set(true);
+
+    // Lazily fetch a page of approved, active, unassigned-vehicle riders to
+    // populate the assignment dropdown. The backend doesn't expose a
+    // dedicated "unassigned riders" filter, so we approximate it client-side.
+    this.riderService.list({ limit: 50, is_active: true, kyc_status: 'approved' }).subscribe({
+      next: (data) => this.unassignedRiders.set(data.riders.filter((r) => !r.vehicle)),
+      error: () => this.unassignedRiders.set([]),
     });
   }
 
-  openAddModal() {
-    this.newVehicle = { vehicleId: '', type: 'Bicycle', plateNo: '', gpsTrackerId: '', dashcamId: '' };
-    this.showAddModal = true;
+  closeAssignModal(): void {
+    this.showAssignModal.set(false);
+    this.assignTarget.set(null);
   }
 
-  closeAddModal() {
-    this.showAddModal = false;
-  }
+  confirmAssign(): void {
+    const vehicle = this.assignTarget();
+    const riderId = this.selectedRiderToAssign();
+    if (!vehicle || !riderId) return;
 
-  saveVehicle() {
-    if (!this.newVehicle.vehicleId || !this.newVehicle.gpsTrackerId) return;
-    if (this.vehicles.some(v => v.vehicleId === this.newVehicle.vehicleId)) {
-      alert('A vehicle with this ID already exists.');
-      return;
-    }
-    this.vehicles.unshift({
-      vehicleId: this.newVehicle.vehicleId!,
-      type: this.newVehicle.type as 'Bicycle' | 'E-Motorcycle',
-      plateNo: this.newVehicle.plateNo || null,
-      gpsTrackerId: this.newVehicle.gpsTrackerId!,
-      dashcamId: this.newVehicle.dashcamId || null,
-      battery: 100,
-      assignedRider: null,
-      status: 'Available',
-      addedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+    this.actionPending.set(true);
+    this.riderService.assignVehicle(riderId, { vehicle_id: vehicle.id }).subscribe({
+      next: () => {
+        this.actionPending.set(false);
+        this.closeAssignModal();
+        this.load(this.page());
+      },
+      error: (err: unknown) => {
+        this.actionPending.set(false);
+        this.actionError.set(err instanceof ApiError ? err.message : 'Assignment failed. Please try again.');
+      },
     });
-    this.closeAddModal();
   }
 
-  openAssignModal(v: Vehicle) {
-    this.assignTarget = v;
-    this.selectedRiderToAssign = '';
-    this.showAssignModal = true;
+  unassign(vehicle: AdminVehicle): void {
+    if (!vehicle.assigned_rider) return;
+    this.actionPending.set(true);
+    this.riderService.unassignVehicle(vehicle.assigned_rider.id).subscribe({
+      next: () => {
+        this.actionPending.set(false);
+        this.load(this.page());
+      },
+      error: (err: unknown) => {
+        this.actionPending.set(false);
+        this.error.set(err instanceof ApiError ? err.message : 'Could not unassign vehicle.');
+      },
+    });
   }
 
-  closeAssignModal() {
-    this.showAssignModal = false;
-    this.assignTarget = null;
+  setMaintenance(vehicle: AdminVehicle): void {
+    const nextStatus: VehicleStatus = vehicle.status === 'maintenance' ? 'available' : 'maintenance';
+    this.actionPending.set(true);
+    this.vehicleService.setStatus(vehicle.id, { status: nextStatus }).subscribe({
+      next: (updated) => {
+        this.actionPending.set(false);
+        this.vehicles.set(this.vehicles().map((v) => (v.id === updated.id ? updated : v)));
+      },
+      error: (err: unknown) => {
+        this.actionPending.set(false);
+        this.error.set(err instanceof ApiError ? err.message : 'Could not update vehicle status.');
+      },
+    });
   }
 
-  confirmAssign() {
-    if (this.assignTarget && this.selectedRiderToAssign) {
-      this.assignTarget.assignedRider = this.selectedRiderToAssign;
-      this.assignTarget.status = 'Assigned';
-      this.unassignedRiders = this.unassignedRiders.filter(r => r !== this.selectedRiderToAssign);
-    }
-    this.closeAssignModal();
-  }
-
-  unassign(v: Vehicle) {
-    if (v.assignedRider) {
-      this.unassignedRiders.push(v.assignedRider);
-    }
-    v.assignedRider = undefined as any;
-    v.status = 'Available';
-  }
-
-  setMaintenance(v: Vehicle) {
-    v.status = v.status === 'Maintenance' ? 'Available' : 'Maintenance';
+  goToPage(target: number): void {
+    if (target < 1 || target > this.pages()) return;
+    this.load(target);
   }
 }
+
+
