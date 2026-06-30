@@ -5,7 +5,8 @@ import { GhsCurrencyPipe } from '../core/pipes/ghs-currency.pipe';
 import { MockDataBannerComponent } from '../shared/mock-data-banner.component';
 import { OrderService } from '../core/services/order.service';
 import { RiderService } from '../core/services/rider.service';
-import { AdminOrder } from '../core/models';
+import { AnalyticsService } from '../core/services/analytics.service';
+import { AdminOrder, RiderLeaderboardEntry, RiderLiveLocation } from '../core/models';
 import { ApiError } from '../core/interceptors/error.interceptor';
 import { GoogleMapsLoaderService } from '../core/services/google-maps-loader.service';
 
@@ -14,13 +15,14 @@ declare const google: any;
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, GhsCurrencyPipe, MockDataBannerComponent],
+  imports: [CommonModule, RouterModule, GhsCurrencyPipe],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
   private readonly orderService = inject(OrderService);
   private readonly riderService = inject(RiderService);
+  private readonly analyticsService = inject(AnalyticsService);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -31,40 +33,19 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   readonly earningsToday = signal(0);
   readonly recentOrders = signal<AdminOrder[]>([]);
 
+  // ---- Order status donut (wired to /admin/analytics/orders) ----
+  // Stroke-dasharray segments out of a 440 circumference circle (r=70).
+  readonly donut = signal({ completedPct: 0, pendingPct: 0, cancelledPct: 0 });
+
   @ViewChild('dashMapContainer') dashMapContainer!: ElementRef;
   private dashMap: any;
 
   private readonly mapsLoader = inject(GoogleMapsLoaderService);
 
-  // The leaderboard ("Most Completed Orders Today") and live fleet map have
-  // no supporting endpoint yet (no analytics/leaderboard or GPS feed) — kept
-  // as illustrative preview content with a visible banner.
-  topRiders = [
-    {
-      name: 'Eddie Lobanovskiy',
-      email: 'labanovskiy@gmail.com',
-      count: 16,
-      avatar: 'https://i.pravatar.cc/36?img=11',
-    },
-    {
-      name: 'Alexey Stave',
-      email: 'alexeyst@gmail.com',
-      count: 10,
-      avatar: 'https://i.pravatar.cc/36?img=12',
-    },
-    {
-      name: 'Anton Tkacheve',
-      email: 'tkacheveanton@gmail.com',
-      count: 9,
-      avatar: 'https://i.pravatar.cc/36?img=13',
-    },
-    {
-      name: 'Kwesi Boateng',
-      email: 'kwesib@gmail.com',
-      count: 4,
-      avatar: 'https://i.pravatar.cc/36?img=14',
-    },
-  ];
+  // ---- "Most Completed Orders Today" (wired to /admin/analytics/riders/leaderboard) ----
+  topRiders: { name: string; email: string; count: number; avatar: string }[] = [];
+
+  private riderLocations: RiderLiveLocation[] = [];
 
   ngOnInit(): void {
     this.load();
@@ -85,6 +66,51 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       next: (data) => this.activeRiderCount.set(data.total),
       error: () => {
         /* Non-fatal — leave at 0 rather than blocking the rest of the dashboard. */
+      },
+    });
+
+    this.analyticsService.orders({ days: 7 }).subscribe({
+      next: (data) => {
+        const total = data.statusBreakdown.reduce((sum, s) => sum + s.count, 0) || 1;
+        const find = (statuses: string[]) =>
+          data.statusBreakdown
+            .filter((s) => statuses.includes(s.status))
+            .reduce((sum, s) => sum + s.count, 0);
+        const completed = find(['delivered', 'completed']);
+        const cancelled = find(['cancelled', 'failed']);
+        const pending = total - completed - cancelled;
+        this.donut.set({
+          completedPct: Math.round((completed / total) * 100),
+          pendingPct: Math.round((pending / total) * 100),
+          cancelledPct: Math.round((cancelled / total) * 100),
+        });
+      },
+      error: () => {
+        /* Non-fatal — donut chart just stays at 0. */
+      },
+    });
+
+    this.analyticsService.ridersLeaderboard({ limit: 4 }).subscribe({
+      next: (rows: RiderLeaderboardEntry[]) => {
+        this.topRiders = rows.map((r) => ({
+          name: r.fullName,
+          email: r.email ?? '',
+          count: r.completedOrders,
+          avatar: r.avatarUrl ?? 'https://i.pravatar.cc/36',
+        }));
+      },
+      error: () => {
+        /* Non-fatal — leaderboard card just stays empty. */
+      },
+    });
+
+    this.analyticsService.ridersLocations().subscribe({
+      next: (rows) => {
+        this.riderLocations = rows;
+        this.plotDashMapMarkers();
+      },
+      error: () => {
+        /* Non-fatal — map just stays without live pins. */
       },
     });
 
@@ -124,18 +150,24 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         { featureType: 'transit', stylers: [{ visibility: 'off' }] },
       ],
     });
-    // Decorative pins — replace with real coords once GPS endpoint is ready
-    const pins = [
-      { lat: 5.635, lng: -0.185 },
-      { lat: 5.65, lng: -0.12 },
-      { lat: 5.58, lng: -0.23 },
-      { lat: 5.56, lng: -0.16 },
-      { lat: 5.61, lng: -0.14 },
-      { lat: 5.54, lng: -0.18 },
-    ];
-    pins.forEach((pos) => {
-      new google.maps.Marker({ position: pos, map: this.dashMap });
-    });
+    this.plotDashMapMarkers();
+  }
+
+  private dashMarkers: any[] = [];
+
+  // Plots live online-rider positions from /admin/analytics/riders/locations.
+  // Called once the map is ready, and again whenever fresh location data arrives.
+  private plotDashMapMarkers(): void {
+    if (!this.dashMap) return;
+    this.dashMarkers.forEach((m) => m.setMap(null));
+    this.dashMarkers = this.riderLocations.map(
+      (r) =>
+        new google.maps.Marker({
+          position: { lat: r.lat, lng: r.lng },
+          map: this.dashMap,
+          title: r.fullName,
+        }),
+    );
   }
   statusBadgeClass(status: string): string {
     if (status === 'delivered') return 'badge-completed';

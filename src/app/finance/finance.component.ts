@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { GhsCurrencyPipe } from '../core/pipes/ghs-currency.pipe';
 import { MockDataBannerComponent } from '../shared/mock-data-banner.component';
 import { PaymentService } from '../core/services/payment.service';
+import { AnalyticsService } from '../core/services/analytics.service';
 import { AdminPayment, PaymentStatus, PaymentType } from '../core/models';
 import { ApiError } from '../core/interceptors/error.interceptor';
 
@@ -26,6 +27,7 @@ interface PayoutRow {
 })
 export class FinanceComponent implements OnInit {
   private readonly paymentService = inject(PaymentService);
+  private readonly analyticsService = inject(AnalyticsService);
 
   activeTab: 'transactions' | 'payouts' = 'transactions';
 
@@ -43,21 +45,14 @@ export class FinanceComponent implements OnInit {
   readonly activateError = signal<string | null>(null);
   readonly activateSuccess = signal(false);
 
-  // ---- Revenue/payment-split charts are decorative — no analytics endpoint exists yet ----
-  weeklyRevenue = [
-    { day: 'Mon', value: 3200 }, { day: 'Tue', value: 4100 }, { day: 'Wed', value: 2950 },
-    { day: 'Thu', value: 4800 }, { day: 'Fri', value: 5600 }, { day: 'Sat', value: 6900 }, { day: 'Sun', value: 4000 },
-  ];
+  // ---- Revenue/payment-split charts (wired to /admin/analytics/finance) ----
+weeklyRevenue = signal<{ day: string; value: number }[]>([]);
   get maxRevenue(): number {
-    return Math.max(...this.weeklyRevenue.map((d) => d.value));
+    return this.weeklyRevenue().length ? Math.max(...this.weeklyRevenue().map((d) => d.value)) : 1;
   }
 
-  paymentSplit = [
-    { method: 'MTN MoMo', percent: 52, color: '#ffc107' },
-    { method: 'Vodafone Cash', percent: 21, color: '#ef4444' },
-    { method: 'AirtelTigo Money', percent: 14, color: '#3b82f6' },
-    { method: 'Card (Paystack)', percent: 13, color: '#8b5cf6' },
-  ];
+  private readonly splitColors = ['#ffc107', '#ef4444', '#3b82f6', '#8b5cf6', '#22c55e', '#f97316'];
+  paymentSplit = signal<{ method: string; percent: number; color: string }[]>([]);
 
   searchTerm = '';
   statusFilter: 'All' | PaymentStatus | 'Paid' | 'Pending' | 'Failed' = 'All';
@@ -74,6 +69,23 @@ export class FinanceComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    this.loadAnalytics();
+  }
+
+  loadAnalytics(): void {
+    this.analyticsService.finance({ days: 7 }).subscribe({
+      next: (data) => {
+       this.weeklyRevenue.set(data.revenueChart.map((p) => ({ day: p.label, value: p.amount })));
+        this.paymentSplit.set(data.paymentMethodBreakdown.map((p, i) => ({
+          method: p.method,
+          percent: p.percent,
+          color: this.splitColors[i % this.splitColors.length],
+        })));
+      },
+      error: () => {
+        /* Non-fatal — revenue/payment-split widgets just stay empty. */
+      },
+    });
   }
 
   load(page = 1): void {

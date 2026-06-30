@@ -44,8 +44,6 @@
       <h2 class="card-title">Fleet Live Location</h2>
       <button class="btn-dark" routerLink="/fleet-tracking">Full map</button>
     </div>
-    <app-mock-data-banner
-      message="There's no live GPS feed endpoint yet — pins below are illustrative, not real-time positions."></app-mock-data-banner>
     <div class="map-box">
       <div #dashMapContainer class="gmap-container"></div>
     </div>
@@ -58,25 +56,28 @@
   <!-- Right column -->
   <div class="right-col">
 
-    <!-- Donut chart (decorative — no orders-analytics endpoint yet) -->
+    <!-- Donut chart (wired to /admin/analytics/orders) -->
     <div class="card">
       <div class="card-hdr">
         <h2 class="card-title">Orders Analytics</h2>
         <span class="more-dots">···</span>
       </div>
-      <app-mock-data-banner
-        message="No analytics breakdown endpoint exists yet — this chart shows sample proportions."></app-mock-data-banner>
       <div class="donut-center">
         <svg viewBox="0 0 200 200" class="donut-svg">
           <circle cx="100" cy="100" r="70" fill="none" stroke="#f0f0f0" stroke-width="22" />
-          <circle cx="100" cy="100" r="70" fill="none" stroke="#ff6b4a" stroke-width="22" stroke-dasharray="44 396"
-            stroke-dashoffset="0" transform="rotate(-90 100 100)" stroke-linecap="round" />
-          <circle cx="100" cy="100" r="70" fill="none" stroke="#ffc542" stroke-width="22" stroke-dasharray="44 396"
-            stroke-dashoffset="-44" transform="rotate(-90 100 100)" stroke-linecap="round" />
-          <circle cx="100" cy="100" r="70" fill="none" stroke="#3dd598" stroke-width="22" stroke-dasharray="352 88"
-            stroke-dashoffset="-88" transform="rotate(-90 100 100)" stroke-linecap="round" />
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#ff6b4a" stroke-width="22"
+            [attr.stroke-dasharray]="(donut().cancelledPct * 4.4) + ' 440'" stroke-dashoffset="0"
+            transform="rotate(-90 100 100)" stroke-linecap="round" />
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#ffc542" stroke-width="22"
+            [attr.stroke-dasharray]="(donut().pendingPct * 4.4) + ' 440'"
+            [attr.stroke-dashoffset]="-(donut().cancelledPct * 4.4)" transform="rotate(-90 100 100)"
+            stroke-linecap="round" />
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#3dd598" stroke-width="22"
+            [attr.stroke-dasharray]="(donut().completedPct * 4.4) + ' 440'"
+            [attr.stroke-dashoffset]="-((donut().cancelledPct + donut().pendingPct) * 4.4)"
+            transform="rotate(-90 100 100)" stroke-linecap="round" />
           <text x="100" y="94" text-anchor="middle" font-size="28" font-weight="700" fill="#1a1a2e"
-            font-family="Poppins,sans-serif">80%</text>
+            font-family="Poppins,sans-serif">{{ donut().completedPct }}%</text>
           <text x="100" y="116" text-anchor="middle" font-size="12" fill="#aaa"
             font-family="Poppins,sans-serif">Orders</text>
         </svg>
@@ -91,11 +92,13 @@
     <!-- Top riders (decorative — no leaderboard endpoint yet) -->
     <div class="card">
       <h2 class="card-title" style="margin-bottom:14px;">Most Completed Orders Today</h2>
-      <app-mock-data-banner
-        message="No rider leaderboard endpoint exists yet — preview data only."></app-mock-data-banner>
       <div class="riders-hdr">
         <span>Rider Name</span>
         <span>Total Completed Order</span>
+      </div>
+      <div *ngIf="topRiders.length === 0" style="padding: 24px 0; text-align: center; color: #aaa; font-size: 13px;">
+        <i class="ri-trophy-line" style="font-size: 28px; display: block; margin-bottom: 6px; opacity: 0.4;"></i>
+        No completed deliveries yet today
       </div>
       <div class="rider-row" *ngFor="let rider of topRiders">
         <div class="rider-left">
@@ -155,5 +158,3 @@
     </table>
   </div>
 </section>
-
-
