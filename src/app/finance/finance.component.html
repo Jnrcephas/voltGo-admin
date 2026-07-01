@@ -30,7 +30,7 @@
   </div>
 </section>
 
-<!-- ---- REVENUE CHART + PAYMENT SPLIT (decorative — no analytics endpoint yet) ---- -->
+<!-- ---- REVENUE CHART + PAYMENT SPLIT (wired to /admin/analytics/finance) ---- -->
 <section class="mid-row">
 
   <div class="card trend-card">
@@ -38,9 +38,8 @@
       <h2 class="card-title">Weekly Revenue</h2>
       <span class="more-dots">···</span>
     </div>
-    <app-mock-data-banner message="No revenue analytics endpoint exists yet — this chart shows sample data."></app-mock-data-banner>
     <div class="bar-chart">
-      <div class="bar-col" *ngFor="let d of weeklyRevenue">
+      <div class="bar-col" *ngFor="let d of weeklyRevenue()">
         <div class="bar-track">
           <div class="bar-fill" [style.height.%]="(d.value / maxRevenue) * 100">
             <span class="bar-value">{{ d.value | ghs }}</span>
@@ -57,9 +56,8 @@
         <h2 class="card-title">Payment Methods</h2>
         <span class="more-dots">···</span>
       </div>
-      <app-mock-data-banner message="Payment method breakdown is not yet returned by any endpoint — preview data only."></app-mock-data-banner>
       <div class="pm-list">
-        <div class="pm-row" *ngFor="let pm of paymentSplit">
+        <div class="pm-row" *ngFor="let pm of paymentSplit()">
           <div class="pm-top">
             <span class="pm-name">{{ pm.method }}</span>
             <span class="pm-percent">{{ pm.percent }}%</span>

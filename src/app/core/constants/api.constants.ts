@@ -110,4 +110,16 @@ export const API_ENDPOINTS = {
     list: '/payments/admin/list',
     activate: '/payments/admin/activate',
   },
+
+  // ---------------------------------------------------------------
+  // Admin / Analytics
+  // ---------------------------------------------------------------
+  adminAnalytics: {
+    finance: '/admin/analytics/finance',
+    orders: '/admin/analytics/orders',
+    ridersLeaderboard: '/admin/analytics/riders/leaderboard',
+    ridersLocations: '/admin/analytics/riders/locations',
+    ridersUtilization: '/admin/analytics/riders/utilization',
+    customerRetention: '/admin/analytics/customer-retention',
+  },
 } as const;

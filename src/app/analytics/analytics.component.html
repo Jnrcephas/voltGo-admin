@@ -1,4 +1,7 @@
-<app-mock-data-banner message="There is no analytics endpoint yet — every figure on this page is sample data for design preview purposes."></app-mock-data-banner>
+<div class="auth-alert auth-alert-error" *ngIf="error()" style="margin-bottom:18px;">
+  <i class="ri-error-warning-line"></i>
+  <span>{{ error() }}</span>
+</div>
 
 <!-- ---- EXECUTIVE KPI CARDS ---- -->
 <section class="stats-grid">
@@ -32,6 +35,11 @@
       <span class="more-dots">···</span>
     </div>
     <div class="bar-chart">
+      <div *ngIf="weeklyTrend.length === 0"
+        style="padding: 32px 0; text-align: center; color: #aaa; font-size: 13px; width: 100%;">
+        <i class="ri-bar-chart-2-line" style="font-size: 28px; display: block; margin-bottom: 6px; opacity: 0.4;"></i>
+        No delivery data for this period
+      </div>
       <div class="bar-col" *ngFor="let d of weeklyTrend">
         <div class="bar-track">
           <div class="bar-fill" [style.height.%]="(d.value / maxTrend) * 100">
@@ -52,17 +60,18 @@
         <h2 class="card-title">Fleet Health</h2>
         <span class="more-dots">···</span>
       </div>
+      <app-mock-data-banner
+        message="No fleet health endpoint exists yet — this widget shows sample data."></app-mock-data-banner>
       <div class="donut-center">
         <svg viewBox="0 0 200 200" class="donut-svg">
-          <circle cx="100" cy="100" r="70" fill="none" stroke="#f0f0f0" stroke-width="22"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#f0f0f0" stroke-width="22" />
           <circle cx="100" cy="100" r="70" fill="none" stroke="#3dd598" stroke-width="22"
-            [attr.stroke-dasharray]="(fleetHealth.avgBattery * 4.4) + ' 440'"
-            stroke-dashoffset="0"
-            transform="rotate(-90 100 100)" stroke-linecap="round"/>
-          <text x="100" y="94" text-anchor="middle" font-size="28" font-weight="700"
-            fill="#1a1a2e" font-family="Poppins,sans-serif">{{ fleetHealth.avgBattery }}%</text>
-          <text x="100" y="116" text-anchor="middle" font-size="12"
-            fill="#aaa" font-family="Poppins,sans-serif">Avg Battery</text>
+            [attr.stroke-dasharray]="(fleetHealth.avgBattery * 4.4) + ' 440'" stroke-dashoffset="0"
+            transform="rotate(-90 100 100)" stroke-linecap="round" />
+          <text x="100" y="94" text-anchor="middle" font-size="28" font-weight="700" fill="#1a1a2e"
+            font-family="Poppins,sans-serif">{{ fleetHealth.avgBattery }}%</text>
+          <text x="100" y="116" text-anchor="middle" font-size="12" fill="#aaa" font-family="Poppins,sans-serif">Avg
+            Battery</text>
         </svg>
       </div>
       <div class="fleet-meta">
@@ -93,6 +102,8 @@
       <h2 class="card-title">Order Density by Zone</h2>
       <span class="more-dots">···</span>
     </div>
+    <app-mock-data-banner
+      message="No zone/geographic analytics endpoint exists yet — this list shows sample data."></app-mock-data-banner>
     <div class="zone-list">
       <div class="zone-row" *ngFor="let zone of zones">
         <div class="zone-top">
@@ -115,6 +126,8 @@
         <h2 class="card-title">AI Route Optimization</h2>
         <span class="more-dots">···</span>
       </div>
+      <app-mock-data-banner
+        message="No AI route optimization endpoint exists yet — this widget shows sample data."></app-mock-data-banner>
       <div class="ai-grid">
         <div class="ai-tile">
           <i class="ri-time-line ai-icon"></i>
@@ -159,13 +172,18 @@
         </tr>
       </thead>
       <tbody>
+        <tr *ngIf="retention.length === 0">
+          <td colspan="4" style="text-align: center; color: #aaa; padding: 24px 0; font-size: 13px;">
+            <i class="ri-refresh-line" style="font-size: 20px; display: block; margin-bottom: 4px; opacity: 0.4;"></i>
+            No retention data available yet
+          </td>
+        </tr>
         <tr *ngFor="let row of retention">
           <td class="td-track">{{ row.tier }}</td>
           <td>{{ row.renewalRate }}%</td>
           <td>{{ row.churn }}%</td>
           <td>
-            <span class="badge"
-              [ngClass]="{
+            <span class="badge" [ngClass]="{
                 'badge-completed': row.renewalRate >= 70,
                 'badge-pending':   row.renewalRate >= 50 && row.renewalRate < 70,
                 'badge-cancelled': row.renewalRate < 50

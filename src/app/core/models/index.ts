@@ -8,3 +8,4 @@ export * from './order.model';
 export * from './bundle.model';
 export * from './payment.model';
 export * from './settings.model';
+export * from './analytics.model';

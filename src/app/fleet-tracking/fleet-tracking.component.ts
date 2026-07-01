@@ -11,6 +11,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MockDataBannerComponent } from '../shared/mock-data-banner.component';
 import { GoogleMapsLoaderService } from '../core/services/google-maps-loader.service';
+import { AnalyticsService } from '../core/services/analytics.service';
 
 declare const google: any;
 
@@ -38,12 +39,13 @@ interface Vehicle {
   templateUrl: './fleet-tracking.component.html',
   styleUrls: ['./fleet-tracking.component.css'],
 })
-export class FleetTrackingComponent implements AfterViewInit, OnDestroy {
+export class FleetTrackingComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('mapContainer') mapContainer!: ElementRef;
 
   private map!: any;
   private markers = new Map<string, any>();
   private readonly mapsLoader = inject(GoogleMapsLoaderService);
+  private readonly analyticsService = inject(AnalyticsService);
 
   stats = [
     {
@@ -184,6 +186,28 @@ export class FleetTrackingComponent implements AfterViewInit, OnDestroy {
       lng: -0.17,
     },
   ];
+
+  ngOnInit(): void {
+    // Live GPS positions are now backed by /admin/analytics/riders/locations.
+    // Other fields (battery, speed, status, current order, zone, flags) have
+    // no supporting endpoint yet, so the table itself stays preview data —
+    // we only overwrite lat/lng for riders we can match by name.
+    this.analyticsService.ridersLocations().subscribe({
+      next: (rows) => {
+        rows.forEach((loc) => {
+          const match = this.vehicles.find((v) => v.riderName === loc.fullName);
+          if (match) {
+            match.lat = loc.lat;
+            match.lng = loc.lng;
+          }
+        });
+        this.refreshMarkers();
+      },
+      error: () => {
+        /* Non-fatal — map keeps its initial preview positions. */
+      },
+    });
+  }
 
   ngAfterViewInit(): void {
     this.mapsLoader
